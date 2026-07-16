@@ -1,0 +1,24 @@
+{
+  "name": "@music-app/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Typed fetch layer for apps/mobile, built on @music-app/shared-types and the backend's OpenAPI schema.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@music-app/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@music-app/config": "workspace:*",
+    "eslint": "10.7.0",
+    "rimraf": "6.0.1",
+    "typescript": "5.9.3"
+  }
+}

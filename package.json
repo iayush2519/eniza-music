@@ -1,0 +1,22 @@
+{
+  "name": "music-app",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Original premium music streaming application (Android-first, React Native/Expo + NestJS).",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "2.10.5",
+    "typescript": "5.9.3"
+  }
+}

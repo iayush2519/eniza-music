@@ -1,0 +1,30 @@
+{
+  "name": "@music-app/audio-engine",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Platform-abstracted audio playback engine. Android implementation on Media3/ExoPlayer, exposed via a native module + typed JS interface. See docs/architecture/audio-engine.md.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "clean": "rimraf dist"
+  },
+  "peerDependencies": {
+    "expo": "~57.0.6",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
+  },
+  "devDependencies": {
+    "@music-app/config": "workspace:*",
+    "@types/react": "~19.2.2",
+    "eslint": "10.7.0",
+    "expo": "~57.0.6",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "rimraf": "6.0.1",
+    "typescript": "5.9.3"
+  }
+}

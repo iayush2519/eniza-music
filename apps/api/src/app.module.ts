@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { LibraryModule } from './library/library.module';
 import { PlaybackModule } from './playback/playback.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module';
     LibraryModule,
     DiscoveryModule,
     PlaybackModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

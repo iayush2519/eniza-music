@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { DiscoveryModule } from './discovery/discovery.module';
 import { LibraryModule } from './library/library.module';
 import { UsersModule } from './users/users.module';
 
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     CatalogModule,
     LibraryModule,
+    DiscoveryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,7 +2,13 @@
   "extends": "../config/tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    // DOM lib (not part of the shared base) is added here specifically
+    // for the global `fetch`/`Response`/`URL` types this package's
+    // http-client.ts uses. React Native provides these globals at
+    // runtime (via its own polyfills), so this is a types-only addition,
+    // not a claim that this package runs in a browser.
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src"]
 }

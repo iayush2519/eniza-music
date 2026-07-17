@@ -15,8 +15,10 @@ explicitly approved before the next phase starts.
   dependency (placeholder screens only — no feature UI yet). See
   `docs/architecture/design-system.md` and
   `decisions/0004-design-system-visual-identity.md`.
-- [ ] **Phase 3 — Backend core.** `auth` + `users` modules, Postgres schema
-  via Drizzle, Docker Compose for local Postgres/Redis/MinIO.
+- [x] **Phase 3 — Backend core.** `auth` + `users` modules, Postgres schema
+  via Drizzle, Docker Compose for local Postgres/Redis/MinIO. See
+  `docs/architecture/backend-architecture.md` and
+  `decisions/0005-auth-token-strategy.md`.
 - [ ] **Phase 4 — Catalog & library domain.** Tracks/albums/playlists CRUD,
   seed data, mobile screens consuming it via TanStack Query.
 - [ ] **Phase 5 — Audio playback engine.** `packages/audio-engine` native
@@ -48,3 +50,12 @@ explicitly approved before the next phase starts.
   ad hoc theme/themed-* files from the Expo template. Cross-package Metro
   resolution verified end to end (iOS/Android/web bundles, live web
   render).
+- **2026-07-17** — Phase 3 complete: `auth` + `users` modules, Drizzle
+  schema/migrations against Postgres, Docker Compose for local
+  Postgres/Redis/MinIO. A real refresh-token rotation bug (byte-identical
+  tokens when two refreshes landed in the same second, defeating replay
+  detection) was found via direct in-process investigation, fixed (`jti`
+  claim added), and covered by permanent regression tests. Full e2e suite
+  runs against an embedded Postgres-compatible test database
+  (`@electric-sql/pglite`), no Docker required for CI. See
+  `decisions/0005-auth-token-strategy.md`.

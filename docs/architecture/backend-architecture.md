@@ -14,8 +14,15 @@ process, not a rewrite.
 ## Modules (initial release)
 
 - **`auth`** — registration, login, JWT access + rotating refresh tokens,
-  session/device tracking for revocation.
-- **`users`** — profile data, preferences, role flags (listener/artist).
+  session/device tracking for revocation. *(Implemented Phase 3.)*
+- **`users`** — profile data, role flags (listener/artist). Preferences
+  are not yet modeled — deferred until a feature actually needs them.
+  *(Implemented Phase 3, minimal.)*
+- **`auth`** and **`users`** are implemented as of Phase 3 — see
+  `decisions/0005-auth-token-strategy.md` for the concrete token
+  design. `catalog`, `library`, `upload`, `streaming`, `storage`, and
+  `queue` below describe the intended shape for later phases and are not
+  yet built.
 - **`catalog`** — tracks, albums, artists, search/browse. Read-heavy,
   source-agnostic (see `content-model.md`).
 - **`library`** — a user's playlists, likes, follows. Owns the
@@ -73,14 +80,54 @@ speculative complexity.
 
 ## AWS-readiness without AWS lock-in for local dev
 
-- Local development runs Postgres, Redis, and MinIO via Docker Compose —
-  no AWS account required to develop.
+- Local development runs Postgres, Redis, and MinIO via Docker Compose
+  (`docker-compose.yml` at the repo root, added Phase 3) — no AWS account
+  required to develop. Redis and MinIO are provisioned but not yet
+  consumed by any module (no `queue` or `storage` module exists yet —
+  those land with the `upload` module in a later phase).
 - The `storage` module's adapter is selected by environment variable, not
   by code branching scattered through the codebase.
 - Infra-as-code (Terraform) is written when the deployment phase starts,
   targeting: RDS (Postgres), ElastiCache (Redis), S3, CloudFront, and a
   container runtime (ECS Fargate is the default assumption — reassessed at
   that phase). None of this is provisioned yet.
+
+## Configuration and startup validation
+
+`ConfigModule` is configured with a `validate` function
+(`src/config/env.validation.ts`) that fails application startup
+immediately, with a clear error message, if required environment variables
+are missing or malformed (e.g. a JWT secret shorter than 32 characters).
+This is deliberate: a misconfigured secret that's merely `undefined` should
+never silently sign tokens with the literal string `"undefined"` — the
+failure needs to happen at boot, not the first time a real request hits
+the affected code path.
+
+## Database layer
+
+Drizzle ORM connects to Postgres via the `postgres` (postgres-js) driver,
+provided through a single `@Global()` `DatabaseModule` behind an explicit
+DI token (`DATABASE_CONNECTION`) rather than a concrete class — this keeps
+every consuming service decoupled from the specific driver, and is also
+what makes the database swappable in tests (see below) without touching
+application code.
+
+Schema is defined in `src/database/schema/*.schema.ts` (currently `users`
+and `sessions`); migrations are generated via `drizzle-kit generate` and
+committed to `src/database/migrations/`, then applied via
+`drizzle-kit migrate` against a real Postgres instance (Docker Compose
+locally, RDS in a real deployment).
+
+### Testing without Docker
+
+The e2e test suite (`apps/api/test/*.e2e-spec.ts`) does not require Docker
+or a running Postgres instance. It connects Drizzle directly to
+`@electric-sql/pglite` (an embedded, WASM-compiled Postgres) via
+`drizzle-orm/pglite`, applies the same committed SQL migration files used
+against real Postgres, and overrides the `DATABASE_CONNECTION` provider in
+a Nest `TestingModule`. This is a real Postgres-compatible database for
+test purposes — not a mock — so tests exercise actual SQL, constraints,
+and Drizzle query behavior. See `apps/api/test/test-db.ts`.
 
 ## Security posture (summary — full detail in `security.md`)
 

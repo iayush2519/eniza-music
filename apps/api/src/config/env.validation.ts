@@ -52,6 +52,22 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   JWT_REFRESH_EXPIRES_IN: string = '30d';
+
+  /**
+   * Per docs/architecture/music-provider-architecture.md, Jamendo is the
+   * first real `MusicProvider`. Deliberately optional: when unset (e.g.
+   * local dev without an API key, or the test environment),
+   * `DiscoveryModule` falls back to `MockProvider` rather than failing
+   * startup — a missing third-party API key should degrade gracefully,
+   * not be treated the same as a missing JWT secret.
+   */
+  @IsString()
+  @IsOptional()
+  JAMENDO_CLIENT_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  JAMENDO_API_BASE_URL: string = 'https://api.jamendo.com/v3.0';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

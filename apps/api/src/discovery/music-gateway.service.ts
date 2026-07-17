@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 
-import { MockProvider } from './providers/mock-provider';
-import {
+import { ACTIVE_MUSIC_PROVIDER } from './discovery.constants';
+import type {
   MusicProvider,
   ProviderAlbum,
   ProviderArtist,
@@ -40,22 +40,10 @@ export interface GatewaySearchResult {
  */
 @Injectable()
 export class MusicGateway {
-  /**
-   * A single active provider for now — `MockProvider` in tests/local dev,
-   * a real adapter (Jamendo) selected by configuration in a later
-   * milestone. Held as a `MusicProvider` reference (not a concrete
-   * `MockProvider` reference) everywhere except construction, so adding a
-   * provider-selection mechanism later doesn't touch any read/upsert logic
-   * below.
-   */
-  private readonly provider: MusicProvider;
-
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
-    mockProvider: MockProvider,
-  ) {
-    this.provider = mockProvider;
-  }
+    @Inject(ACTIVE_MUSIC_PROVIDER) private readonly provider: MusicProvider,
+  ) {}
 
   async search(query: string, options?: SearchOptions): Promise<GatewaySearchResult> {
     const result = await this.provider.search(query, options);

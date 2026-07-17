@@ -1,6 +1,8 @@
+import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { createTestDatabase, TestDatabase } from './test-db';
+import { validateEnv } from '../src/config/env.validation';
 import { DATABASE_CONNECTION } from '../src/database/database.constants';
 import { DatabaseModule } from '../src/database/database.module';
 import { DiscoveryModule } from '../src/discovery/discovery.module';
@@ -25,7 +27,11 @@ describe('MusicGateway (e2e)', () => {
     testDb = await createTestDatabase();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [DatabaseModule, DiscoveryModule],
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+        DatabaseModule,
+        DiscoveryModule,
+      ],
     })
       .overrideProvider(DATABASE_CONNECTION)
       .useValue(testDb.db)

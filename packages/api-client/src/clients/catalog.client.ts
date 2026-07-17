@@ -11,10 +11,6 @@ import { HttpClient } from '../http-client';
 export class CatalogClient {
   constructor(private readonly http: HttpClient) {}
 
-  listTracks(): Promise<Track[]> {
-    return this.http.request('/catalog/tracks', { skipAuth: true });
-  }
-
   getTrack(id: string): Promise<Track> {
     return this.http.request(`/catalog/tracks/${id}`, { skipAuth: true });
   }

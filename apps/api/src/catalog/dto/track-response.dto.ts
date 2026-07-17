@@ -12,6 +12,6 @@ export class TrackResponseDto implements Track {
   title!: string;
   durationSeconds!: number;
   trackNumber!: number | null;
-  audioUrl!: string;
+  audioUrl!: string | null;
   coverArtUrl!: string | null;
 }

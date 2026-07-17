@@ -1,0 +1,1 @@
+ALTER TABLE "tracks" ALTER COLUMN "audio_url" DROP NOT NULL;

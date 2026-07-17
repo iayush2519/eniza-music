@@ -11,6 +11,12 @@ export type Track = {
   title: string;
   durationSeconds: number;
   trackNumber: number | null;
-  audioUrl: string;
+  /**
+   * Nullable as of the provider-cache pivot (see
+   * docs/decisions/0007-provider-backed-music-catalog.md): provider-
+   * cached tracks resolve a stream URL on demand rather than storing one
+   * permanently. Only pre-pivot rows are guaranteed to have a value here.
+   */
+  audioUrl: string | null;
   coverArtUrl: string | null;
 };

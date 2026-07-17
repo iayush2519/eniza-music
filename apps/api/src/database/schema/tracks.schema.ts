@@ -27,9 +27,11 @@ export const trackLicenseTypeEnum = pgEnum('track_license_type', ['artist_direct
  * a local metadata cache row (not owned/uploaded content) — see
  * artists.schema.ts for the full rationale. `providerId` + `externalId`
  * form the cache key; `lastRefreshedAt` drives background refresh (added
- * in a later milestone). `audioUrl` is kept for now (Phase 4 rows still
- * have one); provider-backed rows resolve a stream URL on demand via the
- * `MusicGateway` instead of relying on a stored URL.
+ * in a later milestone). `audioUrl` is nullable: Phase 4 rows still have
+ * one, but provider-cached rows never do — a stream URL is resolved on
+ * demand via `MusicGateway.resolveStreamUrl` (see music-gateway.service.ts)
+ * rather than stored here, since provider stream URLs can be short-TTL and
+ * would go stale if cached permanently.
  */
 export const tracks = pgTable(
   'tracks',
@@ -44,7 +46,7 @@ export const tracks = pgTable(
     title: text('title').notNull(),
     durationSeconds: integer('duration_seconds').notNull(),
     trackNumber: integer('track_number'),
-    audioUrl: text('audio_url').notNull(),
+    audioUrl: text('audio_url'),
     coverArtUrl: text('cover_art_url'),
     sourceKind: trackSourceKindEnum('source_kind').notNull().default('upload'),
     licenseType: trackLicenseTypeEnum('license_type').notNull().default('artist_direct'),

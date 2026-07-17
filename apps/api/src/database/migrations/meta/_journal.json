@@ -8,6 +8,13 @@
       "when": 1784272014741,
       "tag": "0000_clean_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784278799570,
+      "tag": "0001_narrow_talkback",
+      "breakpoints": true
     }
   ]
 }

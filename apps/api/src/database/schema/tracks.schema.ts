@@ -1,14 +1,17 @@
-import { integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { albums } from './albums.schema';
 import { artists } from './artists.schema';
 
 /**
- * Per docs/architecture/content-model.md, every track carries a `source`
- * discriminator so a future licensed-provider integration can be added
- * without a schema migration. Only `'upload'` is ever written today — the
- * enum exists so adding `'licensed_provider'` later is additive, not
- * disruptive.
+ * Originally added (Phase 4) so a future licensed-provider integration
+ * could be added without a migration. That integration has now happened
+ * — see docs/decisions/0007-provider-backed-music-catalog.md — and this
+ * enum is superseded by the more precise `providerId` column below
+ * (which names the actual provider, e.g. `'jamendo'`, rather than a
+ * coarse category). Kept as-is rather than removed: no destructive change
+ * was called for, and `'upload'` remains an accurate historical value for
+ * rows seeded before the pivot.
  */
 export const trackSourceKindEnum = pgEnum('track_source_kind', ['upload']);
 
@@ -20,30 +23,39 @@ export const trackSourceKindEnum = pgEnum('track_source_kind', ['upload']);
 export const trackLicenseTypeEnum = pgEnum('track_license_type', ['artist_direct']);
 
 /**
- * Belongs to one artist, optionally part of one album. `audioUrl` is a
- * direct URL to the audio file for now — Phase 4 scope is catalog CRUD and
- * seed data, not the `streaming` module's signed-URL resolution
- * (content-model.md's `resolvePlaybackUrl` port, planned for a later
- * phase alongside the `upload`/`storage` modules). Seeded tracks point at
- * freely licensed sample audio so the catalog is genuinely playable once
- * Phase 5's audio engine lands, without requiring real uploads first.
+ * Per docs/decisions/0007-provider-backed-music-catalog.md, this table is
+ * a local metadata cache row (not owned/uploaded content) — see
+ * artists.schema.ts for the full rationale. `providerId` + `externalId`
+ * form the cache key; `lastRefreshedAt` drives background refresh (added
+ * in a later milestone). `audioUrl` is kept for now (Phase 4 rows still
+ * have one); provider-backed rows resolve a stream URL on demand via the
+ * `MusicGateway` instead of relying on a stored URL.
  */
-export const tracks = pgTable('tracks', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  artistId: uuid('artist_id')
-    .notNull()
-    .references(() => artists.id, { onDelete: 'cascade' }),
-  albumId: uuid('album_id').references(() => albums.id, { onDelete: 'set null' }),
-  title: text('title').notNull(),
-  durationSeconds: integer('duration_seconds').notNull(),
-  trackNumber: integer('track_number'),
-  audioUrl: text('audio_url').notNull(),
-  coverArtUrl: text('cover_art_url'),
-  sourceKind: trackSourceKindEnum('source_kind').notNull().default('upload'),
-  licenseType: trackLicenseTypeEnum('license_type').notNull().default('artist_direct'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const tracks = pgTable(
+  'tracks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    artistId: uuid('artist_id')
+      .notNull()
+      .references(() => artists.id, { onDelete: 'cascade' }),
+    albumId: uuid('album_id').references(() => albums.id, { onDelete: 'set null' }),
+    providerId: text('provider_id'),
+    externalId: text('external_id'),
+    title: text('title').notNull(),
+    durationSeconds: integer('duration_seconds').notNull(),
+    trackNumber: integer('track_number'),
+    audioUrl: text('audio_url').notNull(),
+    coverArtUrl: text('cover_art_url'),
+    sourceKind: trackSourceKindEnum('source_kind').notNull().default('upload'),
+    licenseType: trackLicenseTypeEnum('license_type').notNull().default('artist_direct'),
+    lastRefreshedAt: timestamp('last_refreshed_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('tracks_provider_id_external_id_idx').on(table.providerId, table.externalId),
+  ],
+);
 
 export type Track = typeof tracks.$inferSelect;
 export type NewTrack = typeof tracks.$inferInsert;

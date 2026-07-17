@@ -15,6 +15,13 @@
       "when": 1784278799570,
       "tag": "0001_narrow_talkback",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784286278263,
+      "tag": "0002_windy_sinister_six",
+      "breakpoints": true
     }
   ]
 }

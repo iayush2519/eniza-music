@@ -67,7 +67,11 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(meResponse.body).toMatchObject({ email, displayName: 'Me Test User', isArtist: false });
+      expect(meResponse.body).toMatchObject({
+        email,
+        displayName: 'Me Test User',
+        isArtist: false,
+      });
       expect((meResponse.body as Record<string, unknown>).passwordHash).toBeUndefined();
     });
 

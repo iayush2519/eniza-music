@@ -7,9 +7,10 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "test": "jest",
     "clean": "rimraf dist"
   },
   "peerDependencies": {
@@ -19,12 +20,21 @@
   },
   "devDependencies": {
     "@music-app/config": "workspace:*",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "eslint": "catalog:",
     "expo": "~57.0.6",
+    "jest": "^30.0.0",
     "react": "catalog:",
     "react-native": "catalog:",
     "rimraf": "catalog:",
+    "ts-jest": "^29.4.11",
     "typescript": "catalog:"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testRegex": ".*\\.spec\\.ts$",
+    "rootDir": "src"
   }
 }

@@ -6,12 +6,13 @@ import { CatalogController } from './catalog.controller';
 import { TracksService } from './tracks.service';
 
 /**
- * Read-heavy, source-agnostic catalog browsing per
- * docs/architecture/content-model.md. No auth required — catalog browsing
- * is public. Mutating catalog data (creating tracks/albums as an artist)
- * is a Phase-later `upload` module concern, not this one; `catalog` only
- * reads today (seed data is inserted directly via the seed script, not
- * through this module's services).
+ * Read-only access to the local metadata cache tables
+ * (`artists`/`albums`/`tracks`), per
+ * docs/decisions/0007-provider-backed-music-catalog.md. No auth required
+ * — these are public reads. `MusicGateway` (in `discovery`) is the only
+ * writer of these tables now; this module never mutates them, and the
+ * seed script populates them through the Gateway rather than through
+ * these services (see database/seed.ts).
  */
 @Module({
   controllers: [CatalogController],

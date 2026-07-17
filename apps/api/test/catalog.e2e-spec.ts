@@ -13,9 +13,12 @@ import { DatabaseModule } from '../src/database/database.module';
 import { albums, artists, tracks, users } from '../src/database/schema';
 
 /**
- * End-to-end coverage for public catalog browsing. Unlike `auth`/`library`,
- * these endpoints require no authentication — verified explicitly below
- * (no Authorization header is ever sent in this suite).
+ * End-to-end coverage for the local metadata cache's read-only routes
+ * that survived Milestone 12's retirement of the old "browse everything"
+ * surface (see catalog.controller.ts) — single-entity lookups by id and
+ * scoped relational reads. Unlike `auth`/`library`, these endpoints
+ * require no authentication — verified explicitly below (no
+ * Authorization header is ever sent in this suite).
  */
 describe('Catalog (e2e)', () => {
   let app: INestApplication<App>;
@@ -85,41 +88,6 @@ describe('Catalog (e2e)', () => {
     await testDb.close();
   });
 
-  describe('GET /catalog/tracks', () => {
-    it('lists tracks without requiring authentication', async () => {
-      const response = await request(app.getHttpServer()).get('/catalog/tracks').expect(200);
-      const body = response.body as TrackResponseDto[];
-
-      expect(Array.isArray(body)).toBe(true);
-      expect(body.some((track) => track.id === trackId)).toBe(true);
-    });
-  });
-
-  describe('GET /catalog/tracks/search', () => {
-    it('finds a track by a case-insensitive substring match', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/catalog/tracks/search')
-        .query({ q: 'searchable' })
-        .expect(200);
-      const body = response.body as TrackResponseDto[];
-
-      expect(body.some((track) => track.id === trackId)).toBe(true);
-    });
-
-    it('returns an empty array for a query with no matches', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/catalog/tracks/search')
-        .query({ q: 'no-such-track-title-exists' })
-        .expect(200);
-
-      expect(response.body).toEqual([]);
-    });
-
-    it('rejects a missing query parameter with 400', async () => {
-      await request(app.getHttpServer()).get('/catalog/tracks/search').expect(400);
-    });
-  });
-
   describe('GET /catalog/tracks/:id', () => {
     it('returns a single track by id', async () => {
       const response = await request(app.getHttpServer())
@@ -135,15 +103,6 @@ describe('Catalog (e2e)', () => {
       await request(app.getHttpServer())
         .get('/catalog/tracks/00000000-0000-0000-0000-000000000000')
         .expect(404);
-    });
-  });
-
-  describe('GET /catalog/albums', () => {
-    it('lists albums', async () => {
-      const response = await request(app.getHttpServer()).get('/catalog/albums').expect(200);
-      const body = response.body as AlbumResponseDto[];
-
-      expect(body.some((album) => album.id === albumId)).toBe(true);
     });
   });
 

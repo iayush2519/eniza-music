@@ -15,10 +15,6 @@ export class CatalogClient {
     return this.http.request(`/catalog/tracks/${id}`, { skipAuth: true });
   }
 
-  listAlbums(): Promise<Album[]> {
-    return this.http.request('/catalog/albums', { skipAuth: true });
-  }
-
   getAlbum(id: string): Promise<Album> {
     return this.http.request(`/catalog/albums/${id}`, { skipAuth: true });
   }

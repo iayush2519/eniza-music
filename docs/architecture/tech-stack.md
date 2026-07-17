@@ -75,6 +75,27 @@ forcing our baseline on it, since Metro/Expo tooling compatibility with a
 specific TypeScript minor is more load-bearing than cross-workspace version
 uniformity for this one app. `apps/api` and all `packages/*` use 5.9.3.
 
+## Known exception: ESLint major version is not uniform across the workspace
+
+`packages/*` and the workspace root run **ESLint 10.x** (pinned via the pnpm
+catalog). `apps/mobile` and `apps/api` are pinned to **ESLint 9.x** instead,
+because both apps depend on packages that cap their ESLint peer range at
+`^9.0.0` and have not published ESLint 10 support yet:
+
+- `apps/mobile` uses `eslint-config-expo`, which depends on
+  `eslint-plugin-import`, whose current release only declares support up to
+  ESLint 9.
+- `apps/api`'s Nest-CLI-generated config uses `eslint-plugin-prettier` /
+  `eslint-config-prettier`, which are ESLint-10-compatible, but `@nestjs/cli`
+  generates against ESLint 9 as of this Nest CLI release.
+
+This is a deliberate, documented exception rather than an accidental
+mismatch: each app's ESLint version matches what its own first-party
+tooling (Expo CLI, Nest CLI) generates and tests against, and `pnpm why
+eslint` shows exactly two resolved versions across the whole workspace, both
+intentional. Revisit this once `eslint-plugin-import` and the Nest CLI
+templates support ESLint 10.
+
 ## Known exception: `apps/api` tsconfig is Nest-CLI-owned, not extended from `packages/config`
 
 `apps/api/tsconfig.json` keeps the Nest CLI's generated compiler options

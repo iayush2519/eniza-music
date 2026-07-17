@@ -13,16 +13,16 @@
     "clean": "rimraf dist"
   },
   "peerDependencies": {
-    "react": "19.2.3",
-    "react-native": "0.86.0"
+    "react": "catalog:",
+    "react-native": "catalog:"
   },
   "devDependencies": {
     "@music-app/config": "workspace:*",
     "@types/react": "~19.2.2",
-    "eslint": "10.7.0",
-    "react": "19.2.3",
-    "react-native": "0.86.0",
-    "rimraf": "6.0.1",
-    "typescript": "5.9.3"
+    "eslint": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:"
   }
 }

@@ -1,5 +1,19 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Single source of truth for versions shared across packages/*. apps/mobile
+# and apps/api intentionally do NOT consume this catalog: apps/mobile is
+# pinned to the TypeScript/ESLint versions Expo's own template ships
+# (docs/architecture/tech-stack.md), and apps/api is pinned to the versions
+# the Nest CLI generates, on an older ESLint major (see the same doc for
+# why eslint-plugin-import currently caps that at ESLint 9.x).
+catalog:
+  typescript: 5.9.3
+  eslint: 10.7.0
+  rimraf: 6.0.1
+  react: 19.2.3
+  react-native: 0.86.0
+
 allowBuilds:
   unrs-resolver: true

@@ -71,3 +71,18 @@ package/app via matching `package.json` scripts:
 All internal packages are versioned as `0.0.0` and referenced via the
 workspace protocol (`workspace:*`) — they are never published to a registry.
 This is an internal-only monorepo, not a collection of public libraries.
+
+## Shared dependency versions: pnpm catalog
+
+`packages/*` (and the workspace root) source their `typescript`, `eslint`,
+`rimraf`, `react`, and `react-native` versions from a single `catalog:`
+block in `pnpm-workspace.yaml`, referenced as `"typescript": "catalog:"` in
+each `package.json`. This means bumping one of these versions across every
+internal package is a one-line change in `pnpm-workspace.yaml` instead of an
+edit to N `package.json` files, and it's impossible for two `packages/*` to
+silently drift onto different versions of the same tool.
+
+`apps/mobile` and `apps/api` deliberately do **not** use the catalog for
+these same tools — see the "known exceptions" in `tech-stack.md` for why
+each app is pinned independently to what its own CLI (Expo CLI / Nest CLI)
+generates and supports.

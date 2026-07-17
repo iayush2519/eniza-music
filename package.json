@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "description": "Original premium music streaming application (Android-first, React Native/Expo + NestJS).",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.14.0"
   },
   "packageManager": "pnpm@11.13.1",
   "scripts": {
@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "turbo": "2.10.5",
-    "typescript": "5.9.3"
+    "typescript": "catalog:"
   }
 }

@@ -5,4 +5,6 @@ export class ArtistResponseDto implements Artist {
   name!: string;
   bio!: string | null;
   avatarUrl!: string | null;
+  providerId!: string | null;
+  externalId!: string | null;
 }

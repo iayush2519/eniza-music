@@ -6,4 +6,6 @@ export class AlbumResponseDto implements Album {
   title!: string;
   coverArtUrl!: string | null;
   releasedAt!: string | null;
+  providerId!: string | null;
+  externalId!: string | null;
 }

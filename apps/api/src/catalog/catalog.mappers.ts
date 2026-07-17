@@ -19,6 +19,8 @@ export function toTrackDto(track: Track): TrackResponseDto {
     trackNumber: track.trackNumber,
     audioUrl: track.audioUrl,
     coverArtUrl: track.coverArtUrl,
+    providerId: track.providerId,
+    externalId: track.externalId,
   };
 }
 
@@ -29,6 +31,8 @@ export function toAlbumDto(album: Album): AlbumResponseDto {
     title: album.title,
     coverArtUrl: album.coverArtUrl,
     releasedAt: album.releasedAt?.toISOString() ?? null,
+    providerId: album.providerId,
+    externalId: album.externalId,
   };
 }
 
@@ -38,5 +42,7 @@ export function toArtistDto(artist: Artist): ArtistResponseDto {
     name: artist.name,
     bio: artist.bio,
     avatarUrl: artist.avatarUrl,
+    providerId: artist.providerId,
+    externalId: artist.externalId,
   };
 }

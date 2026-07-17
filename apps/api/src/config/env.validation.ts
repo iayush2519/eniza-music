@@ -68,6 +68,18 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   JAMENDO_API_BASE_URL: string = 'https://api.jamendo.com/v3.0';
+
+  /**
+   * Backs the metadata-refresh job queue (see
+   * apps/api/src/discovery/discovery.module.ts). Deliberately optional,
+   * same reasoning as `JAMENDO_CLIENT_ID`: when unset (local dev without
+   * Docker running, and every test — `jest-e2e-setup.ts` never sets
+   * this), the app falls back to an in-process inline queue instead of
+   * failing startup or requiring a real Redis connection.
+   */
+  @IsString()
+  @IsOptional()
+  REDIS_URL?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

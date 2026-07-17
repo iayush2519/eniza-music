@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { artists } from './artists.schema';
 
@@ -7,7 +7,8 @@ import { artists } from './artists.schema';
  * a local metadata cache row (not owned content) — see artists.schema.ts
  * for the full rationale, which applies identically here. `providerId` +
  * `externalId` form the cache key; `lastRefreshedAt` drives background
- * refresh (added in a later milestone).
+ * refresh; `unavailable` is set when the provider reports the entity is
+ * gone (see artists.schema.ts for the full rationale on both).
  *
  * Still belongs to one artist row (now itself a cache row); ordering of
  * tracks within an album still lives on `tracks.trackNumber`, not here.
@@ -24,6 +25,7 @@ export const albums = pgTable(
     title: text('title').notNull(),
     coverArtUrl: text('cover_art_url'),
     releasedAt: timestamp('released_at', { withTimezone: true }),
+    unavailable: boolean('unavailable').notNull().default(false),
     lastRefreshedAt: timestamp('last_refreshed_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

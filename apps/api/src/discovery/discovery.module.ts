@@ -2,12 +2,15 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { ACTIVE_MUSIC_PROVIDER } from './discovery.constants';
+import { MetadataRefreshProcessor } from './jobs/metadata-refresh.processor';
+import { MetadataRefreshSweepService } from './jobs/metadata-refresh-sweep.service';
 import { MusicGateway } from './music-gateway.service';
 import { JamendoProvider } from './providers/jamendo-provider';
 import { MockProvider } from './providers/mock-provider';
 import { SearchController } from './search.controller';
 import { SearchService } from './search.service';
 import { EnvironmentVariables } from '../config/env.validation';
+import { QueueModule } from '../queue/queue.module';
 
 /**
  * Owns the `MusicProvider` abstraction and its concrete adapters, per
@@ -23,14 +26,22 @@ import { EnvironmentVariables } from '../config/env.validation';
  * never checks configuration itself; it only ever sees "the active
  * provider" via the token, so adding a third provider later is a change
  * to this factory alone.
+ *
+ * Also owns background metadata refresh: `MetadataRefreshProcessor`
+ * (queue consumer) and `MetadataRefreshSweepService` (scheduled sweep)
+ * both depend on `MusicGateway` and the queue provided by `QueueModule`
+ * — see docs/architecture/music-provider-architecture.md.
  */
 @Module({
+  imports: [QueueModule],
   controllers: [SearchController],
   providers: [
     MockProvider,
     JamendoProvider,
     MusicGateway,
     SearchService,
+    MetadataRefreshProcessor,
+    MetadataRefreshSweepService,
     {
       provide: ACTIVE_MUSIC_PROVIDER,
       inject: [ConfigService, MockProvider, JamendoProvider],

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { users } from './users.schema';
 
@@ -19,6 +19,12 @@ import { users } from './users.schema';
  * The column and its (now nullable) unique constraint are kept in case a
  * future feature links a real user account to a cached artist (e.g. a
  * verified-artist claim flow), but nothing currently sets it.
+ *
+ * `unavailable`: set by background refresh (see
+ * discovery/jobs/metadata-refresh-queue.service.ts) when the active
+ * provider reports this entity no longer exists. The row is kept, not
+ * deleted, so anything referencing it locally (a playlist, a library
+ * entry) still resolves to something rather than a dangling id.
  */
 export const artists = pgTable(
   'artists',
@@ -32,6 +38,7 @@ export const artists = pgTable(
     name: text('name').notNull(),
     bio: text('bio'),
     avatarUrl: text('avatar_url'),
+    unavailable: boolean('unavailable').notNull().default(false),
     lastRefreshedAt: timestamp('last_refreshed_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

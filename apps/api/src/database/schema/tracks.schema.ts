@@ -1,4 +1,13 @@
-import { integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 import { albums } from './albums.schema';
 import { artists } from './artists.schema';
@@ -31,7 +40,9 @@ export const trackLicenseTypeEnum = pgEnum('track_license_type', ['artist_direct
  * one, but provider-cached rows never do — a stream URL is resolved on
  * demand via `MusicGateway.resolveStreamUrl` (see music-gateway.service.ts)
  * rather than stored here, since provider stream URLs can be short-TTL and
- * would go stale if cached permanently.
+ * would go stale if cached permanently. `unavailable` is set when the
+ * provider reports the entity is gone (see artists.schema.ts for the
+ * full rationale).
  */
 export const tracks = pgTable(
   'tracks',
@@ -50,6 +61,7 @@ export const tracks = pgTable(
     coverArtUrl: text('cover_art_url'),
     sourceKind: trackSourceKindEnum('source_kind').notNull().default('upload'),
     licenseType: trackLicenseTypeEnum('license_type').notNull().default('artist_direct'),
+    unavailable: boolean('unavailable').notNull().default(false),
     lastRefreshedAt: timestamp('last_refreshed_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

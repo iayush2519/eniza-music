@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { and, eq, lt } from 'drizzle-orm';
 
 import { ACTIVE_MUSIC_PROVIDER } from './discovery.constants';
+import { isStale, METADATA_CACHE_TTL_MS } from './metadata-refresh.constants';
 import type {
   MusicProvider,
   ProviderAlbum,
@@ -13,6 +14,11 @@ import type {
 import { DATABASE_CONNECTION } from '../database/database.constants';
 import type { Database } from '../database/database.module';
 import { Album, Artist, albums, artists, Track, tracks } from '../database/schema';
+import type {
+  MetadataRefreshJob,
+  MetadataRefreshQueue,
+} from '../queue/metadata-refresh-queue.interface';
+import { METADATA_REFRESH_QUEUE } from '../queue/queue.constants';
 
 export interface GatewaySearchResult {
   tracks: Track[];
@@ -34,15 +40,23 @@ export interface GatewaySearchResult {
  * serving the request, so the cache fills itself from real traffic rather
  * than only a separate sync job.
  *
- * Background metadata refresh for stale cache rows (lazy-on-read +
- * scheduled sweep) is a later milestone — this service always calls the
- * provider on a cache miss, but does not yet re-check age on a cache hit.
+ * Background metadata refresh for stale cache rows: a cache hit older
+ * than `METADATA_CACHE_TTL_MS` (see metadata-refresh.constants.ts) is
+ * still returned immediately — a user-facing read is never blocked on a
+ * provider round trip — but also enqueues a `MetadataRefreshJob` via
+ * `MetadataRefreshQueue`, processed by `MetadataRefreshProcessor`
+ * (see queue.module.ts / metadata-refresh.processor.ts). Rows that never
+ * get organically read stay stale until
+ * `MetadataRefreshSweepService`'s scheduled sweep picks them up instead.
  */
 @Injectable()
 export class MusicGateway {
+  private readonly logger = new Logger(MusicGateway.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     @Inject(ACTIVE_MUSIC_PROVIDER) private readonly provider: MusicProvider,
+    @Inject(METADATA_REFRESH_QUEUE) private readonly refreshQueue: MetadataRefreshQueue,
   ) {}
 
   async search(query: string, options?: SearchOptions): Promise<GatewaySearchResult> {
@@ -58,15 +72,27 @@ export class MusicGateway {
   }
 
   async getTrack(localId: string): Promise<Track | undefined> {
-    return this.findCachedTrackById(localId);
+    const track = await this.findCachedTrackById(localId);
+    if (track) {
+      this.enqueueRefreshIfStale('track', track.id, track.lastRefreshedAt);
+    }
+    return track;
   }
 
   async getAlbum(localId: string): Promise<Album | undefined> {
-    return this.findCachedAlbumById(localId);
+    const album = await this.findCachedAlbumById(localId);
+    if (album) {
+      this.enqueueRefreshIfStale('album', album.id, album.lastRefreshedAt);
+    }
+    return album;
   }
 
   async getArtist(localId: string): Promise<Artist | undefined> {
-    return this.findCachedArtistById(localId);
+    const artist = await this.findCachedArtistById(localId);
+    if (artist) {
+      this.enqueueRefreshIfStale('artist', artist.id, artist.lastRefreshedAt);
+    }
+    return artist;
   }
 
   /**
@@ -136,6 +162,123 @@ export class MusicGateway {
 
     const related = await this.provider.getRelatedTracks(track.externalId);
     return Promise.all(related.map((providerTrack) => this.upsertTrack(providerTrack)));
+  }
+
+  private enqueueRefreshIfStale(
+    entityType: MetadataRefreshJob['entityType'],
+    localId: string,
+    lastRefreshedAt: Date,
+  ): void {
+    if (!isStale(lastRefreshedAt)) {
+      return;
+    }
+    // Fire-and-forget: enqueueing must never delay the read that
+    // triggered it. A failure here just means this particular row stays
+    // stale a bit longer — the scheduled sweep (see
+    // metadata-refresh-sweep.service.ts) will pick it up eventually.
+    this.refreshQueue.enqueue({ entityType, localId }).catch((error: unknown) => {
+      this.logger.warn(`Failed to enqueue refresh for ${entityType} ${localId}: ${String(error)}`);
+    });
+  }
+
+  /**
+   * Re-fetches a cached track from the provider and updates the existing
+   * row in place — same local id, so nothing referencing it (a playlist,
+   * a library entry, mobile's already-rendered UI) needs to change.
+   * Called by `MetadataRefreshProcessor`, never directly by a read path.
+   * If the provider reports the track no longer exists, the row is
+   * flagged `unavailable` rather than deleted (see artists.schema.ts).
+   */
+  async refreshTrack(localId: string): Promise<void> {
+    const cached = await this.findCachedTrackById(localId);
+    if (!cached?.externalId) {
+      return;
+    }
+
+    const providerTrack = await this.provider.getTrack(cached.externalId);
+    if (!providerTrack) {
+      await this.db
+        .update(tracks)
+        .set({ unavailable: true, lastRefreshedAt: new Date() })
+        .where(eq(tracks.id, localId));
+      return;
+    }
+
+    await this.upsertTrack(providerTrack);
+  }
+
+  async refreshAlbum(localId: string): Promise<void> {
+    const cached = await this.findCachedAlbumById(localId);
+    if (!cached?.externalId) {
+      return;
+    }
+
+    const providerAlbum = await this.provider.getAlbum(cached.externalId);
+    if (!providerAlbum) {
+      await this.db
+        .update(albums)
+        .set({ unavailable: true, lastRefreshedAt: new Date() })
+        .where(eq(albums.id, localId));
+      return;
+    }
+
+    await this.upsertAlbum(providerAlbum);
+  }
+
+  async refreshArtist(localId: string): Promise<void> {
+    const cached = await this.findCachedArtistById(localId);
+    if (!cached?.externalId) {
+      return;
+    }
+
+    const providerArtist = await this.provider.getArtist(cached.externalId);
+    if (!providerArtist) {
+      await this.db
+        .update(artists)
+        .set({ unavailable: true, lastRefreshedAt: new Date() })
+        .where(eq(artists.id, localId));
+      return;
+    }
+
+    await this.upsertArtist(providerArtist);
+  }
+
+  /**
+   * Finds cache rows past their TTL, for
+   * `MetadataRefreshSweepService`'s scheduled sweep — catches rows that
+   * a lazy refresh-on-read never touches (e.g. a track sitting untouched
+   * in a playlist nobody has opened in weeks). Excludes rows already
+   * flagged `unavailable`: the provider has already confirmed those are
+   * gone, so re-checking them on every sweep tick would be wasted work.
+   * Bounded by `limit` per entity kind so one sweep tick can't enqueue an
+   * unbounded number of jobs at once.
+   */
+  async findStaleEntities(limit: number): Promise<MetadataRefreshJob[]> {
+    const cutoff = new Date(Date.now() - METADATA_CACHE_TTL_MS);
+
+    const [staleTracks, staleAlbums, staleArtists] = await Promise.all([
+      this.db
+        .select({ id: tracks.id })
+        .from(tracks)
+        .where(and(eq(tracks.unavailable, false), lt(tracks.lastRefreshedAt, cutoff)))
+        .limit(limit),
+      this.db
+        .select({ id: albums.id })
+        .from(albums)
+        .where(and(eq(albums.unavailable, false), lt(albums.lastRefreshedAt, cutoff)))
+        .limit(limit),
+      this.db
+        .select({ id: artists.id })
+        .from(artists)
+        .where(and(eq(artists.unavailable, false), lt(artists.lastRefreshedAt, cutoff)))
+        .limit(limit),
+    ]);
+
+    return [
+      ...staleTracks.map(({ id }): MetadataRefreshJob => ({ entityType: 'track', localId: id })),
+      ...staleAlbums.map(({ id }): MetadataRefreshJob => ({ entityType: 'album', localId: id })),
+      ...staleArtists.map(({ id }): MetadataRefreshJob => ({ entityType: 'artist', localId: id })),
+    ];
   }
 
   private async findCachedTrackById(id: string): Promise<Track | undefined> {

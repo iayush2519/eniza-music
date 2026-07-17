@@ -24,4 +24,11 @@ catalog:
 
 allowBuilds:
   esbuild: true
+  # Optional native accelerator for bullmq's msgpackr dependency; msgpackr
+  # has a pure-JS fallback, so declining this build script has no
+  # functional impact and avoids running an unreviewed native build step.
+  msgpackr-extract: false
   unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - bullmq@5.80.7

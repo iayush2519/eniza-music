@@ -12,11 +12,15 @@ import { useArtistNameMap } from '@/hooks/use-artist-name-map';
 import { apiClient } from '@/lib/api-client';
 
 /**
- * Catalog search by track title. Public, same as Home — see
- * docs/architecture/content-model.md. The query is debounced client-side
- * via TanStack Query's `enabled` gate rather than firing on every
- * keystroke against the backend's `ilike` search
- * (apps/api/src/catalog/tracks.service.ts).
+ * The primary discovery entry point — per
+ * docs/architecture/music-provider-architecture.md's product flow
+ * ("Open App → Home ⇄ Search → Results → Tap Track → Immediate
+ * Playback"). Backed by the real provider-cache-aware `GET /search`
+ * endpoint (apps/api/src/discovery/search.controller.ts), scoped to
+ * tracks only for this screen — album/artist results are returned by the
+ * same endpoint but have no dedicated UI yet. The query is debounced
+ * client-side via TanStack Query's `enabled` gate rather than firing on
+ * every keystroke.
  */
 export default function ExploreScreen() {
   const [query, setQuery] = useState('');
@@ -24,8 +28,8 @@ export default function ExploreScreen() {
 
   const trimmedQuery = query.trim();
   const searchQuery = useQuery({
-    queryKey: ['catalog', 'tracks', 'search', trimmedQuery],
-    queryFn: () => apiClient.catalog.searchTracks(trimmedQuery),
+    queryKey: ['search', 'tracks', trimmedQuery],
+    queryFn: () => apiClient.search.search(trimmedQuery, 'track'),
     enabled: trimmedQuery.length > 0,
   });
 
@@ -33,7 +37,7 @@ export default function ExploreScreen() {
     <Surface style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <FlatList<Track>
-          data={trimmedQuery.length > 0 ? searchQuery.data ?? [] : []}
+          data={trimmedQuery.length > 0 ? searchQuery.data?.tracks ?? [] : []}
           keyExtractor={(track) => track.id}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={

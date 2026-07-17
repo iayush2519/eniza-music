@@ -15,10 +15,6 @@ export class CatalogClient {
     return this.http.request('/catalog/tracks', { skipAuth: true });
   }
 
-  searchTracks(query: string): Promise<Track[]> {
-    return this.http.request('/catalog/tracks/search', { query: { q: query }, skipAuth: true });
-  }
-
   getTrack(id: string): Promise<Track> {
     return this.http.request(`/catalog/tracks/${id}`, { skipAuth: true });
   }

@@ -1,16 +1,28 @@
 # Catalog & Library Domain (Phase 4)
 
+> **Partially superseded.** This document was written when `catalog`
+> modeled an owned, upload-based content catalog. That model changed —
+> see [`decisions/0007-provider-backed-music-catalog.md`](../decisions/0007-provider-backed-music-catalog.md)
+> and [`music-provider-architecture.md`](./music-provider-architecture.md)
+> for the current design. The sections below on **schema shape** and
+> **what each screen fetches** describe the retired model and are kept for
+> history; everything about the **library module's ownership pattern**,
+> **shared-types/api-client structure**, **auth UI**, and **routing**
+> below is still accurate and unchanged by the pivot.
+
 This documents the concrete implementation of the `catalog` and `library`
 modules described at a high level in `content-model.md` and
 `backend-architecture.md`, plus the mobile-side consumption layer
 (`packages/api-client`, TanStack Query, and the minimal auth UI needed to
 reach authenticated library screens).
 
-## Schema shape
+## Schema shape *(as originally built — see `music-provider-architecture.md` for the current shape)*
 
 Six tables, all in `apps/api/src/database/schema/`: `artists`, `albums`,
 `tracks`, `playlists`, `playlist_tracks`, `library_entries`. Three shape
-decisions are worth calling out because they weren't the simplest option:
+decisions are worth calling out because they weren't the simplest option
+— and all three turned out to still hold under the provider pivot, which
+is why the tables were kept rather than dropped:
 
 ### `library_entries` is one polymorphic table, not three
 
@@ -35,21 +47,27 @@ application-level check that could race.
 
 ### `tracks` carries `sourceKind` and `licenseType` enums with one value each
 
-Per `content-model.md`'s "design for a future licensed provider" section,
-both enums exist now (`sourceKind: 'upload'`, `licenseType:
-'artist_direct'`) even though only one value is ever written in this phase.
-Adding a licensed-provider source later is an additive enum value, not a
-migration that touches every existing row.
+Per `content-model.md`'s original "design for a future licensed provider"
+section, both enums existed from the start (`sourceKind: 'upload'`,
+`licenseType: 'artist_direct'`) even though only one value was ever written
+in Phase 4. This is the one piece of foresight that paid off directly: the
+provider pivot needed a place to record which external source a cached row
+came from, and this enum (now joined by explicit `providerId`/`externalId`
+columns — see `music-provider-architecture.md`) was already there.
 
-## Backend module boundaries
+## Backend module boundaries *(as originally built)*
 
 - **`catalog`** — public, read-only. `CatalogController` has no
   `JwtAuthGuard`; browsing tracks/albums/artists never requires an
-  account, per `content-model.md`.
+  account, per `content-model.md`. Under the provider model, this
+  "browse everything" controller surface is retired (there's no owned
+  catalog to enumerate) in favor of `search`; single-entity lookups by id
+  survive as reads against the metadata cache.
 - **`library`** — authenticated, ownership-scoped. Every `LibraryController`
   route is behind `JwtAuthGuard`, and every service method takes the
   requesting user's id and filters by it — there is no code path that lets
-  one user read or mutate another user's playlists or saved entries.
+  one user read or mutate another user's playlists or saved entries. **This
+  module and its ownership pattern are unchanged by the provider pivot.**
 
 Response DTOs (`TrackResponseDto`, `PlaylistResponseDto`, etc.) each
 `implements` the matching type in `packages/shared-types`. This means a
@@ -59,7 +77,11 @@ backend, not discovered later as a runtime mismatch on the client.
 
 ## `packages/shared-types` and `packages/api-client`
 
-Two new packages, both consumed by both `apps/api` and `apps/mobile`:
+**Unchanged by the provider pivot** — this structure and discipline
+carries forward as-is; only the *content* of the `Track`/`Album`/`Artist`
+types and the catalog-facing client methods change (see
+`music-provider-architecture.md`). Two new packages, both consumed by both
+`apps/api` and `apps/mobile`:
 
 - **`shared-types`** — domain types (`Track`, `Album`, `Artist`,
   `Playlist`, `PlaylistWithTracks`, `LibraryEntry`, `UserProfile`) and
@@ -138,7 +160,7 @@ for exactly this (confirmed via docs.expo.dev/router/advanced/protected,
 not a deprecated pattern) and handles all of that internally — so the
 hand-rolled version was strictly more code for the same behavior.
 
-## Mobile data layer: what each screen fetches
+## Mobile data layer: what each screen fetches *(as originally built — see `music-provider-architecture.md` for the current data sources)*
 
 | Screen | Query | Auth required |
 |---|---|---|
@@ -146,12 +168,22 @@ hand-rolled version was strictly more code for the same behavior.
 | Explore (`(tabs)/explore.tsx`) | `catalog.searchTracks(query)` — enabled only once the search box is non-empty | No |
 | Library (`(tabs)/library.tsx`) | `library.listPlaylists()` | Yes (screen only renders once `Stack.Protected` admits the `(tabs)` group) |
 
+Under the provider model, Home moves to `GET /recommendations` (it stays
+the personalized landing page, not replaced by Search) and Explore/Search
+moves to `GET /search`; Library's row is unchanged. `catalog.listTracks()`
+in particular never made sense against a provider-backed catalog (you
+generally can't cheaply enumerate an entire external catalog), which is
+part of why this had to change regardless of the broader product pivot.
+
 Both Home and Explore also fetch the full artist list
 (`catalog.listArtists()`, via a shared `useArtistNameMap` hook) to resolve
 each track's `artistId` to a display name, since `Track` intentionally
 carries only the id (see `packages/shared-types/src/domain/track.ts`) —
 denormalizing the artist name onto every track response would duplicate
-data that's cheap to join client-side for a catalog this size.
+data that's cheap to join client-side for a catalog this size. This
+id-to-name resolution pattern is unchanged by the provider pivot —
+`artistId` still points at a local row (now a cache row rather than an
+owned one), so `useArtistNameMap` keeps working the same way.
 
 Playlist creation/editing and the `library/saved` (likes/follows) endpoints
 are implemented on the backend (`LibraryClient.createPlaylist`, `.save`,
@@ -159,9 +191,9 @@ are implemented on the backend (`LibraryClient.createPlaylist`, `.save`,
 to add a track to a playlist before Phase 5 (audio playback engine) gives
 the app a "now playing" context to add *from*. Building that UI now would
 mean either a dead-end placeholder or inventing a workflow that gets
-reworked once playback exists.
+reworked once playback exists. This is still true post-pivot.
 
-## Known limitations
+## Known limitations *(as of Phase 4 — see `music-provider-architecture.md` for limitations introduced by the provider pivot)*
 
 - Tab bar iconography reuses the Explore icon as a placeholder for
   Library — no dedicated asset exists yet; deferred to Phase 7 (motion &

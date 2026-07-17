@@ -20,10 +20,19 @@ explicitly approved before the next phase starts.
   `docs/architecture/backend-architecture.md` and
   `decisions/0005-auth-token-strategy.md`.
 - [x] **Phase 4 — Catalog & library domain.** Tracks/albums/playlists CRUD,
-  seed data, mobile screens consuming it via TanStack Query.
+  seed data, mobile screens consuming it via TanStack Query. *(Its
+  upload-platform content model was later superseded — see the
+  2026-07-19 status log entry and `decisions/0007-provider-backed-music-catalog.md`
+  — but the phase's delivered module/library/mobile patterns stand.)*
+- [ ] **Phase 4.5 — Provider-backed catalog pivot.** Replace the owned
+  upload-based catalog with a `MusicProvider`/`MusicGateway` abstraction;
+  repurpose `artists`/`albums`/`tracks` as a local metadata cache with
+  background refresh; add search/listening history, recommendations, and
+  settings. See `music-provider-architecture.md`.
 - [ ] **Phase 5 — Audio playback engine.** `packages/audio-engine` native
   module (Media3/ExoPlayer + Expo config plugin), mini-player + full-player
-  UI, queue management.
+  UI, queue management. Now plays provider-resolved stream URLs instead of
+  self-hosted ones (no change to the engine's own interface).
 - [ ] **Phase 6 — Offline & downloads.** SQLite (Drizzle) schema, download
   manager, background task handling.
 - [ ] **Phase 7 — Motion & polish pass.** Reanimated transitions, gesture
@@ -71,3 +80,22 @@ explicitly approved before the next phase starts.
   38 backend e2e tests + 19 unit tests passing; full workspace typecheck/
   lint/build clean. See `docs/architecture/catalog-and-library.md` and
   `decisions/0006-mobile-route-guarding.md`.
+- **2026-07-19** — Product direction changed before Phase 5 started: the
+  app is now a provider-backed premium streaming client (Apple Music/
+  Spotify-inspired, original identity), not an independent-artist upload
+  platform. Design reviewed and approved with revisions: `artists`/
+  `albums`/`tracks` are **kept** and repurposed as a local metadata cache
+  (not dropped); a `MusicGateway` sits between backend modules and
+  `MusicProvider` adapters; playlists/library keep referencing local
+  cache-table ids rather than raw provider ids; `users.isArtist` is left
+  unchanged; background metadata refresh is added for stale cache rows;
+  recommendations are driven primarily by our own behavioral data
+  (history/likes/playlists/searches/skips/repeats) with provider
+  "related tracks" as optional enrichment only; Home remains the
+  personalized landing page (not replaced by Search). Documented in
+  `decisions/0007-provider-backed-music-catalog.md` and
+  `music-provider-architecture.md`; `content-model.md`,
+  `catalog-and-library.md`, `backend-architecture.md`, `overview.md`, and
+  `security.md` updated to point at the new design. **No code has been
+  written yet — this is a design-only update, awaiting approval before
+  implementation (tracked as Phase 4.5 above).**

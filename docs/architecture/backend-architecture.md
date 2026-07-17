@@ -11,30 +11,59 @@ others to justify splitting yet. Module boundaries are drawn so that a
 future split (if ever needed) is a matter of moving a module to its own
 process, not a rewrite.
 
-## Modules (initial release)
+## Modules
+
+> **Updated 2026-07-19** — see
+> `decisions/0007-provider-backed-music-catalog.md` and
+> `music-provider-architecture.md`. The backend no longer hosts audio or
+> runs an upload/transcode pipeline; `upload` and `streaming` (as
+> originally sketched below) are replaced by `discovery`/`search` and
+> `playback`, both built on a `MusicGateway` that wraps external
+> `MusicProvider` adapters. `storage` and `queue` survive as
+> infrastructure ports, just serving a different purpose (provider
+> response caching and metadata refresh jobs, instead of file storage and
+> transcode jobs).
 
 - **`auth`** — registration, login, JWT access + rotating refresh tokens,
   session/device tracking for revocation. *(Implemented Phase 3.)*
-- **`users`** — profile data, role flags (listener/artist). Preferences
-  are not yet modeled — deferred until a feature actually needs them.
+- **`users`** — profile data, role flags (listener/artist — `isArtist` is
+  currently vestigial under the provider model but is left unchanged).
+  Preferences are now modeled via the `settings` module below.
   *(Implemented Phase 3, minimal.)*
-- **`auth`** and **`users`** are implemented as of Phase 3 — see
-  `decisions/0005-auth-token-strategy.md` for the concrete token
-  design. `catalog`, `library`, `upload`, `streaming`, `storage`, and
-  `queue` below describe the intended shape for later phases and are not
-  yet built.
-- **`catalog`** — tracks, albums, artists, search/browse. Read-heavy,
-  source-agnostic (see `content-model.md`).
+- **`catalog`** — *(Implemented Phase 4, being reduced.)* Originally
+  tracks/albums/artists as owned content with a public browse surface.
+  Now owns only the **metadata cache** tables (same tables, repurposed —
+  see `music-provider-architecture.md`) and the upsert/refresh logic the
+  Gateway uses; the "browse everything" controller routes are retired
+  (there's no owned catalog to enumerate) in favor of `search`.
 - **`library`** — a user's playlists, likes, follows. Owns the
   many-to-many relationships between users and catalog entities.
-- **`upload`** — presigned upload flow, validation, enqueues transcoding
-  jobs, publishes tracks into `catalog` on completion.
-- **`streaming`** — resolves playback URLs (signed, expiring), records
-  `PlayEvent`s for analytics.
+  **Unchanged by the provider pivot** — it still references local ids;
+  those ids now point at cache rows instead of owned rows.
+  *(Implemented Phase 4.)*
+- **`discovery`** *(new, replaces `upload`)* — houses `MusicGateway`, the
+  `MusicProvider` adapters (a `MockProvider` first, a real provider such
+  as Jamendo or Audius once selected), and the `search` module
+  (`GET /search`). This is the only part of the backend allowed to call an
+  external music API.
+- **`playback`** *(new, replaces `streaming`)* — resolves playback URLs by
+  delegating to `MusicGateway.resolveStreamUrl`; records
+  `listening_history` for analytics and recommendations.
+- **`history`** *(new)* — owns `search_history` and `listening_history`
+  read/write; feeds `recommendations`.
+- **`recommendations`** *(new)* — heuristic scoring over our own
+  behavioral data (listening/search history, likes, playlists), with
+  optional provider-side enrichment as a secondary signal. Backs the Home
+  screen.
+- **`settings`** *(new)* — user preferences; small.
 - **`storage`** — internal module wrapping the object-storage port (S3 in
-  cloud, MinIO locally) so no other module talks to AWS SDK directly.
-- **`queue`** — wraps BullMQ setup/config; `upload` and future jobs use it
-  rather than each module configuring Redis connections independently.
+  cloud, MinIO locally). No longer used for hosting audio (there's no
+  audio to host); retained for anything else that needs object storage
+  (e.g. cached artwork, if that's ever needed) — currently unused, not
+  removed.
+- **`queue`** — wraps BullMQ setup/config. Originally reserved for
+  transcode jobs; now used for background metadata cache refresh jobs
+  (see `music-provider-architecture.md`).
 
 ## Ports and adapters at the infrastructure edges
 
@@ -53,38 +82,47 @@ Drizzle's typed query builder is used directly in each module's service.
 Adding a repository layer with no second implementation planned would be
 speculative complexity.
 
-## Data flow: upload → publish
+## Data flow: search → cache (replaces the old upload → publish flow)
 
-1. Artist requests an upload slot → `upload` module validates
-   (auth, file type/size) and returns a presigned S3 PUT URL from `storage`.
-2. Client uploads the raw audio file directly to S3 (never through our API
-   process — avoids the API server ever buffering large file bodies).
-3. Client confirms completion → `upload` enqueues a transcode job via
-   `queue`.
-4. A worker (same codebase, run as a separate process via a Nest
-   standalone application context) transcodes to streaming-friendly
-   bitrates, writes outputs back to `storage`, and on success creates the
-   `Track` row in `catalog` with `status: 'published'`.
-5. Failures leave the track in `status: 'processing'` or `'failed'` with a
-   reason, visible to the artist — never silently dropped.
+> The original upload → transcode → publish flow described here is
+> retired — there is no upload pipeline anymore. See
+> `music-provider-architecture.md` for the authoritative current flows;
+> summarized below.
+
+1. Mobile app calls `GET /search?q=...`.
+2. `discovery`'s `search` module asks `MusicGateway`, which checks the
+   Redis response cache, then the Postgres metadata cache, before calling
+   the active `MusicProvider`.
+3. Any provider result is normalized and upserted into the metadata cache
+   (`artists`/`albums`/`tracks`, tagged with `providerId`/`externalId`)
+   as a side effect of serving the request — the cache fills itself from
+   real traffic, not only a separate sync job.
+4. Stale cache rows (past their TTL) are still served immediately, with a
+   background refresh enqueued via `queue` rather than blocking the
+   response.
 
 ## Data flow: playback
 
-1. Mobile app requests `resolvePlaybackUrl(trackId)` from `streaming`.
-2. `streaming` checks the track's `source`, asks `storage` for a signed,
-   short-TTL CloudFront URL (upload case) — or, in the future, calls a
-   licensed-provider adapter (see `content-model.md`).
-3. `streaming` records a `PlayEvent` (fire-and-forget, does not block the
-   URL response).
-4. Mobile app hands the URL to the native audio engine.
+1. Mobile app requests `resolvePlaybackUrl(trackId)` from `playback`,
+   where `trackId` is a **local metadata cache id** (the same id playlists
+   and library entries already reference).
+2. `playback` looks up the cache row for that id, and asks `MusicGateway`
+   to resolve a stream URL from the row's `providerId`/`externalId` via
+   that provider's adapter.
+3. `playback` records a `listening_history` row (fire-and-forget, does not
+   block the URL response), later updated with
+   `durationListenedSeconds`/`completed`/`skipped` as playback progresses.
+4. Mobile app hands the URL to the native audio engine — unaffected by any
+   of this; it just receives a URL, exactly as originally designed.
 
 ## AWS-readiness without AWS lock-in for local dev
 
 - Local development runs Postgres, Redis, and MinIO via Docker Compose
   (`docker-compose.yml` at the repo root, added Phase 3) — no AWS account
-  required to develop. Redis and MinIO are provisioned but not yet
-  consumed by any module (no `queue` or `storage` module exists yet —
-  those land with the `upload` module in a later phase).
+  required to develop. Redis is consumed by `discovery`'s provider
+  response cache and by `queue`'s metadata-refresh jobs (see
+  `music-provider-architecture.md`); MinIO/`storage` remains provisioned
+  but unused now that there's no audio to host.
 - The `storage` module's adapter is selected by environment variable, not
   by code branching scattered through the codebase.
 - Infra-as-code (Terraform) is written when the deployment phase starts,
@@ -132,8 +170,11 @@ and Drizzle query behavior. See `apps/api/test/test-db.ts`.
 ## Security posture (summary — full detail in `security.md`)
 
 - All mutating endpoints require auth; ownership checks are explicit in
-  service methods (e.g. an artist can only edit their own tracks).
-- Presigned URLs are short-TTL and scoped to a single object.
+  service methods (e.g. a user can only edit their own playlists —
+  `library.controller.ts`'s `requireOwnedPlaylist`).
+- Presigned URLs are short-TTL and scoped to a single object (applies to
+  any future `storage` usage; not currently exercised since no audio is
+  hosted).
 - Input validation via DTOs (`class-validator`) on every endpoint boundary.
 - Secrets (DB credentials, JWT signing keys, AWS keys) come from environment
   variables / a secrets manager in production, never committed.

@@ -9,22 +9,38 @@ principles, never copied for layout, navigation, branding, or workflow.
 
 ## Product model
 
-The platform is an **independent-artist upload platform**: artists upload
-their own tracks, listeners stream them. This was chosen over a licensed
-commercial catalog because:
+> **Updated 2026-07-19.** The product was originally an independent-artist
+> upload platform (see history below). It is now a **provider-backed
+> streaming client**: the backend never hosts audio or lets users publish
+> tracks. Music discovery and playback are delegated to an external
+> `MusicProvider` behind a `MusicGateway` abstraction, with the backend
+> owning everything user-specific — auth, users, playlists, library,
+> favorites, listening/search history, recommendations, settings,
+> analytics, and a local metadata cache of provider responses. See
+> [`decisions/0007-provider-backed-music-catalog.md`](../decisions/0007-provider-backed-music-catalog.md)
+> and [`music-provider-architecture.md`](./music-provider-architecture.md)
+> for the current design.
+>
+> The primary user flow is: **Open App → (personalized) Home ⇄ Search →
+> Results → Tap Track → Immediate Playback.** Home remains the
+> personalized landing page (recommendations, recently played, your
+> playlists); Search is a permanent, first-class way to find something
+> specific — neither replaces the other.
 
-- It requires no real-world licensing deal to build and demo.
-- It is legally clean for a portfolio project.
-- It showcases full-stack depth: upload pipeline, transcoding, catalog
-  management, streaming, offline downloads — not just a UI over someone
-  else's API.
+### History: why this changed
 
-The system is explicitly designed so a **licensed catalog provider** could be
-added later as a second content source without a rewrite. See
-[`content-model.md`](./content-model.md) for how that extensibility is
-achieved, and
+The platform started as an **independent-artist upload platform**: artists
+upload their own tracks, listeners stream them. That was chosen over a
+licensed commercial catalog because it required no real-world licensing
+deal, was legally clean for a portfolio project, and showcased full-stack
+upload/transcoding depth. See
 [`decisions/0003-content-model-upload-platform.md`](../decisions/0003-content-model-upload-platform.md)
-for the reasoning.
+for that original reasoning, and ADR 0007 for why the product direction
+changed to a premium streaming client (in the spirit of Apple Music/
+Spotify, with its own original identity) rather than an upload platform —
+this requires real third-party catalog breadth that no self-upload model
+can provide, so discovery/playback moved to a provider abstraction while
+the upload pipeline itself was retired.
 
 ## Design goals
 
@@ -50,9 +66,12 @@ shippable in phases:
 
 - Enterprise-scale infrastructure (multi-region, autoscaling groups).
 - Payment processing / monetization.
-- Real DRM or licensed commercial catalog integration.
+- Real DRM.
 - iOS/tablet/desktop/web builds (the architecture supports them later, but
   we build and verify Android first).
+
+Note: "licensed commercial catalog integration" moved from a non-goal to
+the actual model — see the Product model section above.
 
 ## Target platforms
 

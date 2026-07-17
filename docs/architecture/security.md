@@ -60,6 +60,11 @@ baseline below applies from Phase 1 onward.
 - Formal accessibility review (WCAG requires manual testing with assistive
   technology, not just automated checks — flagged here so it isn't
   forgotten).
-- Rate limiting / abuse prevention on public endpoints.
+- Rate limiting / abuse prevention on public endpoints (the `search`
+  endpoint in particular, since it proxies to a rate-limited external
+  provider — see `music-provider-architecture.md`).
 - Dependency vulnerability scanning in CI.
-- Content moderation workflow for uploaded audio.
+
+Note: "content moderation workflow for uploaded audio" was deferred here
+under the original upload-platform model. It no longer applies — there is
+no upload flow (see `decisions/0007-provider-backed-music-catalog.md`).

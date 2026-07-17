@@ -1,84 +1,70 @@
 # Content Model
 
-## Model: independent-artist upload platform
+> **Superseded.** This document originally described an independent-artist
+> upload platform (ADR 0003). That model has been replaced by a
+> provider-backed catalog with local metadata caching — see
+> [`decisions/0007-provider-backed-music-catalog.md`](../decisions/0007-provider-backed-music-catalog.md)
+> and [`music-provider-architecture.md`](./music-provider-architecture.md)
+> for the current design. This document is kept for historical context
+> (why the original model was chosen, and which of its seams carried
+> forward) rather than deleted outright.
 
-Artists create accounts, upload tracks (with metadata and artwork), and the
-platform transcodes and serves them to listeners. This is the sole content
-source for the initial release. See ADR 0003 for why this was chosen over a
-licensed commercial catalog.
+## Original model: independent-artist upload platform
 
-## Designing for a future licensed provider
+Artists created accounts, uploaded tracks (with metadata and artwork), and
+the platform transcoded and served them to listeners. See ADR 0003 for why
+this was chosen initially (no real licensing deal available for a
+portfolio project) and ADR 0007 for why it was replaced (product direction
+changed to a search-first streaming client in the spirit of Apple
+Music/Spotify, which requires real third-party catalog breadth no
+self-upload model can provide).
 
-The initial release only implements the upload-platform source, but the
-domain model and backend module boundaries are shaped so a **second content
-source** (a licensed catalog provider, reached via an external API) could be
-added later without reworking existing code. Concretely:
+## What carried forward into the provider model
 
-### 1. `catalog` module owns a `source` concept, not just "tracks"
+The original design already anticipated *adding* a licensed provider
+alongside uploads (a `source` discriminator on tracks, a
+`resolvePlaybackUrl` port, pluggable ingestion). ADR 0007 goes further —
+removing uploads entirely rather than keeping them alongside a provider —
+but several seams from this document proved directly reusable:
 
-Every track record carries a `source` discriminator:
+- **Source-agnostic read APIs.** The original catalog module's read APIs
+  (search, get-track, get-album) returned the same `Track` shape
+  regardless of where the audio lived. This exact principle is now applied
+  more broadly: every `Track`/`Album`/`Artist` the mobile app sees is a
+  normalized shape, whether it originated from a provider search or a
+  cache read.
+- **Playback URL resolution behind a port, not inlined.** The original
+  `resolvePlaybackUrl(trackId)` capability is preserved almost exactly —
+  see `music-provider-architecture.md`'s "Playback architecture" section —
+  just with every branch now calling a `MusicProvider` adapter instead of
+  one branch calling S3 and another (hypothetically) calling a licensed
+  API.
+- **Rights/licensing metadata modeled from day one.** The `tracks` table's
+  `licenseType` enum (added in Phase 4, only ever holding `'artist_direct'`)
+  is now genuinely exercised, since every cached track comes from an
+  external provider with its own licensing terms.
 
-```ts
-type TrackSource =
-  | { kind: 'upload'; uploaderId: string }
-  | { kind: 'licensed_provider'; providerId: string; externalTrackId: string };
-```
+## What did not carry forward
 
-The catalog module's read APIs (search, get-track, get-album) are
-source-agnostic from the client's perspective — a listener-facing query
-returns the same `Track` shape regardless of where the audio actually lives.
+- **Ingestion as a pluggable ordinary-user-facing pipeline.** There is no
+  upload flow anymore, presigned or otherwise — nothing in this system
+  lets a client publish a track. The `artists`/`albums`/`tracks` tables are
+  now written exclusively by the `MusicGateway` (see
+  `music-provider-architecture.md`), never by a user-facing "create track"
+  endpoint.
+- **Artists as a class of our own users.** `Artist` used to be a
+  public-facing profile linked 1:1 to one of our `User` rows
+  (`artists.userId not null unique`). Under the provider model, a cached
+  `Artist` row almost always represents a real-world artist who has no
+  account in our system at all — `artists.userId` is now nullable, and in
+  practice nearly always null.
+- **`PlayEvent` as originally sketched.** Superseded by `listening_history`
+  (see `music-provider-architecture.md`), which additionally tracks
+  `completed`/`skipped` for recommendation purposes, not just analytics.
 
-### 2. Playback URL resolution is behind a port, not inlined
+## Current core entities
 
-The `streaming` module exposes a single `resolvePlaybackUrl(trackId)`
-capability. Internally it dispatches based on `source.kind`:
-
-- `upload` → issue a signed CloudFront URL against our own S3 object.
-- `licensed_provider` → (future) call the provider's own signed-URL or
-  streaming-token API and return that.
-
-Nothing in the mobile app or in other backend modules needs to know which
-branch executed. This is the seam where a provider integration plugs in.
-
-### 3. Ingestion is a pluggable pipeline, not a single upload form
-
-The `upload` module's job (validate → store original → enqueue transcode →
-publish) is one implementation of a general "ingestion" concept. A future
-provider integration would implement a different ingestion job (e.g. a
-scheduled sync that pulls a provider's catalog and writes `licensed_provider`
-track rows) without touching the upload flow at all.
-
-### 4. Rights/licensing metadata is modeled from day one, even though only
-one value is used today
-
-Tracks carry a `licenseType` field (`'artist_direct'` for now). This exists
-so that when a licensed source is added, downstream features (analytics,
-payout/royalty logic, takedown handling) don't need a schema migration to
-become aware of licensing at all — only a new enum value and the provider
-integration itself.
-
-## What we are explicitly NOT building yet
-
-- Payout/royalty calculation for artists.
-- A licensed-provider integration (no such provider is integrated; the seam
-  above is prepared but unused).
-- DRM. Uploaded files are the artist's own content; protection is limited to
-  signed, expiring URLs (see `security.md`).
-
-## Core entities (initial release)
-
-- `User` — can be a listener, an artist, or both (role flags, not separate
-  tables, since one account can do both).
-- `Artist` — public-facing profile linked to a `User`.
-- `Track` — belongs to one `Artist`, optionally part one `Album`.
-- `Album` — belongs to one `Artist`, ordered collection of `Track`s.
-- `Playlist` — belongs to one `User`, ordered collection of `Track`s from any
-  artist.
-- `LibraryEntry` — a user's saved/liked tracks, albums, artists (follow/like
-  relationships).
-- `PlayEvent` — analytics record (track, user, timestamp, duration listened)
-  for future recommendation/royalty use.
-
-Full schema (columns, indexes, migrations) is defined in
-`apps/api` once Phase 3 (backend core) starts, not duplicated here — this
-document describes the *shape*, not the DDL.
+See `music-provider-architecture.md` for the authoritative, current
+description. In brief: `User`, `Artist`/`Album`/`Track` (now metadata
+*cache* rows tagged with `providerId`/`externalId`, not owned content),
+`Playlist`, `LibraryEntry`, `SearchHistory`, `ListeningHistory`.

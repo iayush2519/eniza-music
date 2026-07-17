@@ -9,9 +9,12 @@ explicitly approved before the next phase starts.
 - [ ] **Phase 1 — Monorepo scaffold.** Turborepo + pnpm workspaces, shared
   config package, empty `apps/mobile` (Expo) and `apps/api` (NestJS) that
   build and run, empty `packages/*` stubs wired up. *(in progress)*
-- [ ] **Phase 2 — Design system foundations.** Tokens, theming, core
-  primitives (Text, Button, Surface, Stack, etc.) in `packages/design-system`.
-  No real feature screens yet.
+- [x] **Phase 2 — Design system foundations.** Tokens, theming, core
+  primitives (Text, Button, Surface, VStack/HStack) built in
+  `packages/design-system` and wired into `apps/mobile` as a real
+  dependency (placeholder screens only — no feature UI yet). See
+  `docs/architecture/design-system.md` and
+  `decisions/0004-design-system-visual-identity.md`.
 - [ ] **Phase 3 — Backend core.** `auth` + `users` modules, Postgres schema
   via Drizzle, Docker Compose for local Postgres/Redis/MinIO.
 - [ ] **Phase 4 — Catalog & library domain.** Tracks/albums/playlists CRUD,
@@ -37,3 +40,11 @@ explicitly approved before the next phase starts.
   audio engine over RNTP; production-quality portfolio scope (no
   enterprise-scale infra, payments, or multi-region in initial release).
   Phase 1 started.
+- **2026-07-16** — Phase 1 complete and audited (dead-code/duplicate-config
+  cleanup, pnpm catalog introduced, Node/toolchain versions verified
+  current). Phase 2 complete: `packages/design-system` built (tokens,
+  theme, `Text`/`Surface`/`VStack`/`HStack`/`Button` primitives) and wired
+  into `apps/mobile` as a real workspace dependency, replacing the local
+  ad hoc theme/themed-* files from the Expo template. Cross-package Metro
+  resolution verified end to end (iOS/Android/web bundles, live web
+  render).

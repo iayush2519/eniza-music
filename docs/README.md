@@ -20,6 +20,6 @@ before making structural changes, instead of relying on chat history.
 2. `architecture/tech-stack.md`
 3. `architecture/monorepo-structure.md`
 4. Whichever domain doc is relevant to the task (mobile, backend, audio
-   engine, content model, security).
+   engine, content model, security, design system).
 5. `decisions/` for the *why* behind any choice that looks unusual.
 6. `roadmap.md` to see what phase we're in and what's already been built.

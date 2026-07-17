@@ -1,10 +1,8 @@
+import { Surface, Text, useTheme } from '@music-app/design-system';
 import { Platform, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { BottomTabInset, MaxContentWidth } from '@/constants/layout';
 
 // Placeholder explore/search screen. Real catalog browsing lands in Phase 4
 // (see docs/roadmap.md). This screen only exists so the tab navigator has a
@@ -13,7 +11,7 @@ export default function ExploreScreen() {
   const safeAreaInsets = useSafeAreaInsets();
   const insets = {
     ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
+    bottom: safeAreaInsets.bottom + BottomTabInset + 16,
   };
   const theme = useTheme();
 
@@ -25,22 +23,22 @@ export default function ExploreScreen() {
       paddingBottom: insets.bottom,
     },
     web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
+      paddingTop: 64,
+      paddingBottom: 24,
     },
   });
 
   return (
     <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
+      style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
       contentInset={insets}
       contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedText type="subtitle">Explore</ThemedText>
-        <ThemedText style={styles.centerText} themeColor="textSecondary">
+      <Surface style={styles.container}>
+        <Text variant="subtitle">Explore</Text>
+        <Text style={styles.centerText} color="textSecondary">
           Catalog browsing and search land in Phase 4.
-        </ThemedText>
-      </ThemedView>
+        </Text>
+      </Surface>
     </ScrollView>
   );
 }
@@ -56,10 +54,10 @@ const styles = StyleSheet.create({
   container: {
     maxWidth: MaxContentWidth,
     flexGrow: 1,
-    gap: Spacing.three,
+    gap: 16,
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
+    paddingHorizontal: 24,
+    paddingVertical: 64,
   },
   centerText: {
     textAlign: 'center',

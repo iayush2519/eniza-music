@@ -1,9 +1,8 @@
+import { Surface, Text } from '@music-app/design-system';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth } from '@/constants/layout';
 
 // Placeholder home screen. Real catalog/library UI is built starting in
 // Phase 4 (see docs/roadmap.md). This screen only exists so the app has a
@@ -11,16 +10,16 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 // pipeline during Phase 1-3.
 export default function HomeScreen() {
   return (
-    <ThemedView style={styles.container}>
+    <Surface style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.title}>
+        <Text variant="title" style={styles.title}>
           Home
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
+        </Text>
+        <Text variant="label" color="textSecondary" style={styles.subtitle}>
           Catalog and library screens land in Phase 4.
-        </ThemedText>
+        </Text>
       </SafeAreaView>
-    </ThemedView>
+    </Surface>
   );
 }
 
@@ -34,9 +33,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.two,
-    paddingBottom: BottomTabInset + Spacing.three,
+    paddingHorizontal: 24,
+    gap: 8,
+    paddingBottom: BottomTabInset + 16,
     maxWidth: MaxContentWidth,
   },
   title: {

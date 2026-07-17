@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "0.0.0",
   "dependencies": {
+    "@music-app/design-system": "workspace:*",
     "expo": "~57.0.6",
     "expo-constants": "~57.0.5",
     "expo-font": "~57.0.1",

@@ -1,13 +1,16 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { ThemeProvider as DesignSystemThemeProvider, useColorScheme } from '@music-app/design-system';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 
 import AppTabs from '@/components/app-tabs';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const scheme = useColorScheme();
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AppTabs />
-    </ThemeProvider>
+    <DesignSystemThemeProvider>
+      <NavigationThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <AppTabs />
+      </NavigationThemeProvider>
+    </DesignSystemThemeProvider>
   );
 }

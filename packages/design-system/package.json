@@ -14,7 +14,8 @@
   },
   "peerDependencies": {
     "react": "catalog:",
-    "react-native": "catalog:"
+    "react-native": "catalog:",
+    "react-native-reanimated": "catalog:"
   },
   "devDependencies": {
     "@music-app/config": "workspace:*",
@@ -22,6 +23,8 @@
     "eslint": "catalog:",
     "react": "catalog:",
     "react-native": "catalog:",
+    "react-native-reanimated": "catalog:",
+    "react-native-worklets": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:"
   }

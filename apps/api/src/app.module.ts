@@ -9,6 +9,7 @@ import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { LibraryModule } from './library/library.module';
+import { PlaybackModule } from './playback/playback.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
     CatalogModule,
     LibraryModule,
     DiscoveryModule,
+    PlaybackModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,15 +1,18 @@
-import { Surface, Text, VStack } from '@music-app/design-system';
+import { EmptyState, ErrorState, Surface, Text, VStack } from '@music-app/design-system';
 import type { Track } from '@music-app/shared-types';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MiniPlayer } from '@/components/mini-player';
 import { TextField } from '@/components/text-field';
 import { TrackRow } from '@/components/track-row';
 import { BottomTabInset, MaxContentWidth } from '@/constants/layout';
 import { useArtistNameMap } from '@/hooks/use-artist-name-map';
 import { apiClient } from '@/lib/api-client';
+import { buildResolvedQueue } from '@/lib/play-queue';
+import { usePlaybackStore } from '@/stores/playback-store';
 
 /**
  * The primary discovery entry point — per
@@ -25,6 +28,9 @@ import { apiClient } from '@/lib/api-client';
 export default function ExploreScreen() {
   const [query, setQuery] = useState('');
   const artistNames = useArtistNameMap();
+  const load = usePlaybackStore((state) => state.load);
+  const currentIndex = usePlaybackStore((state) => state.currentIndex);
+  const currentTrackId = usePlaybackStore((state) => state.queue[currentIndex]?.trackId);
 
   const trimmedQuery = query.trim();
   const searchQuery = useQuery({
@@ -33,12 +39,20 @@ export default function ExploreScreen() {
     enabled: trimmedQuery.length > 0,
   });
 
+  const results = trimmedQuery.length > 0 ? searchQuery.data?.tracks ?? [] : [];
+
+  const playTrack = async (index: number) => {
+    const { queue, startIndex } = await buildResolvedQueue(results, index, artistNames);
+    await load(queue, startIndex);
+  };
+
   return (
     <Surface style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <FlatList<Track>
-          data={trimmedQuery.length > 0 ? searchQuery.data?.tracks ?? [] : []}
+          data={results}
           keyExtractor={(track) => track.id}
+          style={styles.list}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <VStack gap="md" style={styles.header}>
@@ -54,44 +68,56 @@ export default function ExploreScreen() {
             </VStack>
           }
           ListEmptyComponent={
-            <EmptyState
+            <ExploreEmptyState
               hasQuery={trimmedQuery.length > 0}
               isLoading={searchQuery.isLoading}
               isError={searchQuery.isError}
+              onRetry={() => void searchQuery.refetch()}
             />
           }
-          renderItem={({ item }) => <TrackRow track={item} artistName={artistNames.get(item.artistId)} />}
+          renderItem={({ item, index }) => (
+            <TrackRow
+              track={item}
+              artistName={artistNames.get(item.artistId)}
+              isPlaying={item.id === currentTrackId}
+              onPress={() => void playTrack(index)}
+            />
+          )}
           ItemSeparatorComponent={() => <VStack gap="sm" />}
         />
+        <MiniPlayer />
       </SafeAreaView>
     </Surface>
   );
 }
 
-function EmptyState({
+function ExploreEmptyState({
   hasQuery,
   isLoading,
   isError,
+  onRetry,
 }: {
   hasQuery: boolean;
   isLoading: boolean;
   isError: boolean;
+  onRetry: () => void;
 }) {
   if (!hasQuery) {
-    return (
-      <Text variant="label" color="textSecondary" style={styles.centerPad}>
-        Search for a track by title.
-      </Text>
-    );
+    return <EmptyState icon="search" title="Search for music" description="Search for a track by title." />;
   }
   if (isLoading) {
-    return <ActivityIndicator style={styles.centerPad} />;
+    return (
+      <VStack gap="sm" style={styles.centerPad}>
+        <Text variant="label" color="textSecondary" style={styles.centerText}>
+          Searching…
+        </Text>
+      </VStack>
+    );
   }
-  return (
-    <Text variant="label" color="textSecondary" style={styles.centerPad}>
-      {isError ? 'Search failed. Try again.' : 'No matching tracks.'}
-    </Text>
-  );
+  if (isError) {
+    return <ErrorState description="Search failed." onRetry={onRetry} />;
+  }
+  return <EmptyState icon="search" title="No matching tracks" description="Try a different search term." />;
 }
 
 const styles = StyleSheet.create({
@@ -104,6 +130,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
   },
+  list: {
+    flex: 1,
+  },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: BottomTabInset + 16,
@@ -112,7 +141,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   centerPad: {
-    textAlign: 'center',
     paddingVertical: 32,
+  },
+  centerText: {
+    textAlign: 'center',
   },
 });

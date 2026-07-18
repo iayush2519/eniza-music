@@ -14,18 +14,22 @@
   },
   "peerDependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "expo-image": "catalog:",
     "react": "catalog:",
     "react-native": "catalog:",
-    "react-native-reanimated": "catalog:"
+    "react-native-reanimated": "catalog:",
+    "react-native-safe-area-context": "catalog:"
   },
   "devDependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@music-app/config": "workspace:*",
     "@types/react": "~19.2.2",
     "eslint": "catalog:",
+    "expo-image": "catalog:",
     "react": "catalog:",
     "react-native": "catalog:",
     "react-native-reanimated": "catalog:",
+    "react-native-safe-area-context": "catalog:",
     "react-native-worklets": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:"

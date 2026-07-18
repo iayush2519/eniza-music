@@ -107,7 +107,11 @@ export const AuthTextField = forwardRef<TextInput, AuthTextFieldProps>(function 
 
   return (
     <Animated.View
-      style={[styles.container, { borderRadius: theme.radii.md }, containerAnimatedStyle]}>
+      // radius_lg (docs/design/design-system-specification.md §0:
+      // "Default components (input, text inputs)"). Was `theme.radii.md`
+      // (radius_md, "small inputs, toggles" per the same spec table) —
+      // corrected to the token the spec actually names for text inputs.
+      style={[styles.container, { borderRadius: theme.radii.lg }, containerAnimatedStyle]}>
       <Animated.View style={iconAnimatedStyle}>
         <Icon name={icon} size="sm" color={iconColorRole} />
       </Animated.View>

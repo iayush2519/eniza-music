@@ -111,7 +111,14 @@ export function Button({
       }}
       style={[
         styles.base,
-        { backgroundColor: variantStyle.backgroundColor, borderRadius: theme.radii.md },
+        // radius_pill (docs/design/design-system-specification.md §0:
+        // "CTA buttons, profile avatars") — the approved UI board shows
+        // every button as a fully-rounded pill (Login/Register "Sign In"
+        // buttons, onboarding "Next"/"Get Started"). This was previously
+        // `theme.radii.md`, a corner radius meant for "small inputs,
+        // toggles" per the same spec table, not buttons — a real
+        // mismatch against the frozen spec, corrected here.
+        { backgroundColor: variantStyle.backgroundColor, borderRadius: theme.radii.full },
         isFloating &&
           (Platform.OS === 'android'
             ? { elevation: elevation.floating.androidElevation }

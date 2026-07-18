@@ -19,7 +19,10 @@ export const TextField = forwardRef<TextInput, TextInputProps>(function TextFiel
         styles.base,
         {
           backgroundColor: theme.colors.surface,
-          borderRadius: theme.radii.md,
+          // radius_lg (docs/design/design-system-specification.md §0:
+          // "Default components (input, text inputs)"). Was
+          // `theme.radii.md` — same correction as `AuthTextField`.
+          borderRadius: theme.radii.lg,
           color: theme.colors.text,
           fontSize: theme.typeScale.body.fontSize,
         },

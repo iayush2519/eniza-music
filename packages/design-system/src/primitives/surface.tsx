@@ -1,7 +1,8 @@
-import { View, type ViewProps } from 'react-native';
+import { Platform, View, type ViewProps } from 'react-native';
 
 import { useTheme } from '../theme/theme-provider';
 import { ColorRole } from '../tokens/colors';
+import { elevation, ElevationToken } from '../tokens/elevation';
 import { RadiusToken } from '../tokens/radii';
 
 export type SurfaceProps = ViewProps & {
@@ -14,6 +15,13 @@ export type SurfaceProps = ViewProps & {
   radius?: RadiusToken;
   /** Draw a hairline border using the `border` color role. */
   bordered?: boolean;
+  /**
+   * Elevation token. Defaults to `flat` (no shadow). Applies the
+   * platform-appropriate shadow spec automatically — see
+   * `tokens/elevation.ts` — so call sites never write `Platform.select`
+   * themselves.
+   */
+  elevation?: ElevationToken;
 };
 
 /**
@@ -26,10 +34,12 @@ export function Surface({
   color = 'background',
   radius = 'none',
   bordered = false,
+  elevation: elevationToken = 'flat',
   style,
   ...rest
 }: SurfaceProps) {
   const theme = useTheme();
+  const elevationSpec = elevation[elevationToken];
 
   return (
     <View
@@ -40,6 +50,14 @@ export function Surface({
           borderWidth: bordered ? 1 : 0,
           borderColor: theme.colors.border,
         },
+        Platform.OS === 'android'
+          ? { elevation: elevationSpec.androidElevation }
+          : {
+              shadowColor: theme.colors.text,
+              shadowOpacity: elevationSpec.shadowOpacity,
+              shadowRadius: elevationSpec.shadowRadius,
+              shadowOffset: { width: 0, height: elevationSpec.shadowOffsetHeight },
+            },
         style,
       ]}
       {...rest}

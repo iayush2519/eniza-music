@@ -5,16 +5,22 @@
  * docs/architecture/audio-engine.md and
  * docs/decisions/0002-custom-audio-engine-over-rntp.md.
  *
- * This first Phase 5 milestone defines the `PlaybackEngine` contract and
- * the pure, dependency-light queue-building and stream-resolution logic
- * around it — the parts of the system that don't depend on which
- * platform/native player eventually implements `PlaybackEngine`. No
- * concrete `PlaybackEngine` implementation exists yet: the native Android
- * module (Media3/ExoPlayer, a foreground `MediaSessionService`, and an
- * Expo config plugin) is real native engineering and real-device testing
- * on its own, tracked as a later Phase 5 milestone.
+ * Milestone 1 defined the `PlaybackEngine` contract and the pure,
+ * dependency-light queue-building/stream-resolution logic around it.
+ * Milestone 2 adds the first real implementation of that contract:
+ * `AndroidPlaybackEngine`, backed by a Media3/ExoPlayer native module
+ * (`android/src/main/java/expo/modules/audioengine/AudioEngineModule.kt`).
+ * Everything else (a Zustand store, UI) is still meant to depend only on
+ * the `PlaybackEngine` interface, not on `AndroidPlaybackEngine`
+ * directly, so a future iOS implementation can be swapped in behind the
+ * same interface per ADR 0002.
+ *
+ * A foreground `MediaSessionService` (background survival, lock-screen/
+ * notification controls) and an Expo config plugin for it are explicitly
+ * out of scope for this milestone — tracked as later Phase 5 work.
  */
 export * from './types';
 export * from './playback-engine';
+export * from './android-playback-engine';
 export * from './queue-item';
 export * from './stream-resolver';

@@ -2,6 +2,26 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# React Native's Metro bundler does not fully support pnpm's default
+# symlinked node_modules structure (it doesn't implement Node's package
+# exports/symlink resolution the same way Node itself does). Hoisting
+# node_modules avoids a class of "module not found" / duplicate-package
+# errors in apps/mobile, and on Windows it also keeps native module paths
+# short enough for the Android NDK/CMake/Ninja toolchain (CMAKE_OBJECT_PATH_MAX
+# is 250 chars; pnpm's isolated node_modules/.pnpm/<pkg>@<version>_<hash>/
+# node_modules/<pkg>/... prefix reliably blows past that budget for
+# react-native-screens and react-native-worklets, which manifests as
+# "ninja: error: manifest 'build.ninja' still dirty after 100 tries").
+# This trades some of pnpm's strict isolation for React Native ecosystem
+# compatibility, which is the standard, documented approach for RN + pnpm
+# monorepos.
+#
+# NOTE: as of pnpm v11, .npmrc is only read for auth/registry settings; all
+# other settings (this one included) must live here instead of .npmrc.
+nodeLinker: hoisted
+strictPeerDependencies: false
+autoInstallPeers: true
+
 # Single source of truth for versions shared across packages/*. apps/mobile
 # and apps/api intentionally do NOT consume this catalog: apps/mobile is
 # pinned to the TypeScript/ESLint versions Expo's own template ships

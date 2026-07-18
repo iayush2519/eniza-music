@@ -1,0 +1,27 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.musicapp'
+version = '0.0.0'
+
+android {
+  namespace "expo.modules.audioengine"
+  defaultConfig {
+    versionCode 1
+    versionName '0.0.0'
+  }
+}
+
+dependencies {
+  // Keep in sync with docs/architecture/audio-engine.md's Media3/ExoPlayer
+  // decision (ADR 0002). media3-session additionally provides
+  // MediaSessionService for the foreground-service/lock-screen-controls
+  // work planned for a later Phase 5 milestone; only exoplayer and
+  // common are actually used by this milestone's AudioEngineModule.
+  def media3Version = "1.9.1"
+  implementation "androidx.media3:media3-exoplayer:${media3Version}"
+  implementation "androidx.media3:media3-common:${media3Version}"
+  implementation "androidx.media3:media3-session:${media3Version}"
+}

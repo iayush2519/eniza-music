@@ -1,5 +1,6 @@
 import { ColorRoles, colors, ColorScheme } from '../tokens/colors';
 import { radii } from '../tokens/radii';
+import { iconSizes } from '../tokens/sizes';
 import { spacing } from '../tokens/spacing';
 import { typeScale, fontFamily } from '../tokens/typography';
 
@@ -15,6 +16,7 @@ export type Theme = {
   colors: ColorRoles;
   spacing: typeof spacing;
   radii: typeof radii;
+  iconSizes: typeof iconSizes;
   typeScale: typeof typeScale;
   fontFamily: typeof fontFamily;
 };
@@ -25,6 +27,7 @@ function createTheme(scheme: ColorScheme): Theme {
     colors: colors[scheme],
     spacing,
     radii,
+    iconSizes,
     typeScale,
     fontFamily,
   };

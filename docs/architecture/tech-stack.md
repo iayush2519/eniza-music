@@ -19,7 +19,7 @@ but do not casually bump existing pinned versions mid-project without reason.
 | Fast KV storage | MMKV | latest | Non-sensitive UI prefs and persisted Zustand slices. |
 | Secrets | expo-secure-store | latest | Access/refresh tokens only. Never MMKV. |
 | Audio engine | Custom native module on Media3/ExoPlayer | — | See `audio-engine.md`. Not RNTP (see ADR 0002). |
-| Package manager | pnpm | 9.x | Workspaces, disk-efficient, strict by default. |
+| Package manager | pnpm | 11.x (pinned via `packageManager`) | Workspaces, disk-efficient, strict by default. Uses `nodeLinker: hoisted` — see ADR 0008 for why, and for the pnpm v11 config-location pitfall it's tied to. |
 | Monorepo tool | Turborepo | 2.x | Task caching/orchestration across apps/packages. |
 
 ## Backend (`apps/api`)

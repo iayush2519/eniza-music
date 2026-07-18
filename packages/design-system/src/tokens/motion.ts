@@ -33,3 +33,16 @@ export const easing = {
 } as const;
 
 export type EasingToken = keyof typeof easing;
+
+/**
+ * Spring configs, for the handful of interactions that should feel
+ * physically "settling" rather than mechanically easing to a stop — e.g.
+ * a button's release after a press, or a focused input's border
+ * transition. Kept separate from `easing` (which is timing-curve based)
+ * since `withSpring` takes a physics config, not a duration/curve pair.
+ */
+export const spring = {
+  standard: { damping: 18, stiffness: 180, mass: 1 },
+} as const;
+
+export type SpringToken = keyof typeof spring;

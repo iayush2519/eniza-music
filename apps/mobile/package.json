@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "dependencies": {
     "@music-app/api-client": "workspace:*",
+    "@music-app/audio-engine": "workspace:*",
     "@music-app/design-system": "workspace:*",
     "@music-app/shared-types": "workspace:*",
     "@tanstack/react-query": "5.101.2",
@@ -29,21 +30,33 @@
     "zustand": "5.0.14"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "eslint-config-expo": "^57.0.0",
+    "jest": "^30.0.0",
     "rimraf": "6.0.1",
+    "ts-jest": "^29.4.11",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "dev": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "build": "expo export",
+    "test": "jest",
     "clean": "rimraf .expo dist"
   },
-  "private": true
+  "private": true,
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testRegex": ".*\\.spec\\.ts$",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  }
 }

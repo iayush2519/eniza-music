@@ -1,5 +1,5 @@
 import { Button, Surface, Text, useReducedMotion, useTheme } from '@music-app/design-system';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -68,18 +68,21 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     try {
+      // No explicit post-login navigation here on purpose. The moment
+      // `login()` sets `isAuthenticated` true, the root layout's guards
+      // (apps/mobile/src/app/_layout.tsx) unmount `(auth)` — taking this
+      // screen away — and mount `(tabs)`, whose own layout
+      // ((tabs)/_layout.tsx) already redirects to `/verify-otp` if the
+      // logged-in account isn't verified yet. That effect is the single
+      // source of truth for this transition (it also has to cover the
+      // cold-start-with-a-stored-unverified-session case, which this
+      // screen never sees). An earlier version of this screen *also*
+      // pushed to `/verify-otp` right here, racing that same effect —
+      // two back-to-back navigations to the same route, each carrying
+      // its own params — which was the actual cause of a confirmed bug
+      // where the verify-otp screen intermittently rendered with an
+      // empty `email` param. Not duplicating the redirect fixes it.
       await login({ email, password });
-      // A logged-in-but-unverified account (e.g. they closed the app
-      // right after registering, before finishing OTP verification)
-      // must still complete verification — the root layout's guard (see
-      // apps/mobile/src/app/_layout.tsx) keeps `(auth)` reachable for
-      // this case, but doesn't know to land on *this* screen versus
-      // wherever the stack already was, so this explicit push is what
-      // actually gets them to verify-otp rather than just staying on a
-      // (functionally stuck) Login screen.
-      if (!useAuthStore.getState().user?.emailVerified) {
-        router.push({ pathname: '/verify-otp', params: { email, purpose: 'register' } });
-      }
     } catch {
       // Errors surface via the store's `error` field, rendered below.
     }

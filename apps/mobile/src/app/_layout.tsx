@@ -14,6 +14,7 @@ export default function RootLayout() {
   const bootstrap = useAuthStore((state) => state.bootstrap);
   const isBootstrapped = useAuthStore((state) => state.isBootstrapped);
   const isAuthenticated = useAuthStore((state) => state.user !== null);
+  const isEmailVerified = useAuthStore((state) => state.user?.emailVerified ?? false);
 
   // Mounted once, app-wide — playback (and therefore "Continue
   // Listening" progress reporting) continues across screens/tabs, not
@@ -105,27 +106,46 @@ export default function RootLayout() {
               </Stack.Protected>
 
               {/*
-                verify-otp/auth-result are reachable from two disjoint
-                auth states — pre-auth (fresh register/forgot-password)
-                and authenticated-but-unverified (a stored session whose
-                account never finished verification, or the instant
-                register/login's own tokens land but before the "Account
-                Verified" screen has been shown) — so, like
-                player/lyrics/detail below, they're top-level routes
-                gated only on `isReady`, not nested in a group gated on
-                `isAuthenticated` either way. This is what actually fixes
-                the bug where `(tabs)/_layout.tsx`'s redirect effect (an
-                authenticated-but-unverified user gets bounced here) used
-                to target a route inside a group that had already been
-                unmounted by the same auth-state change that triggered
-                the redirect, producing a permanent blank screen with no
-                error.
-              */}
-              <Stack.Protected guard={isReady}>
-                <Stack.Screen name="verify-otp" />
-                <Stack.Screen name="auth-result" />
-              </Stack.Protected>
+                `(tabs)` is deliberately declared *before* verify-otp/
+                auth-result below, even though all three can be
+                simultaneously "eligible" (guard-true) for an
+                authenticated-but-unverified user. This ordering is the
+                actual fix for a confirmed bug where a fully verified,
+                authenticated user intermittently landed on verify-otp
+                (and, in the equivalent auth-result case, on "Account
+                Verified") immediately after a successful login, with no
+                `email`/`purpose` params ever having been pushed.
 
+                The root cause: when `(auth)` unmounts the instant
+                `isAuthenticated` flips true, `Stack.Protected` doesn't
+                just hide the unmounted screen, it has to pick some
+                eligible screen to focus next — and it does so by
+                declaration order among every currently-eligible
+                `Stack.Screen`, not by "which one makes semantic sense
+                for this transition." With verify-otp/auth-result
+                declared *before* `(tabs)` and both guarded by
+                unconditionally-or-broadly-true conditions, they kept
+                winning that fallback regardless of whether the user was
+                actually unverified.
+
+                Declaring `(tabs)` first means a *verified* user's
+                fallback always lands on `(tabs)` (verify-otp/auth-result
+                aren't guard-eligible for them: see verify-otp's own
+                `!isEmailVerified` guard below; auth-result is only ever
+                reached by explicit push, never by this fallback, once
+                `(tabs)` outranks it here). An *unverified* user's
+                fallback still lands on `(tabs)` first too — but
+                `(tabs)/_layout.tsx` renders `null` and its own redirect
+                effect immediately replaces the route with verify-otp,
+                which is a real, explicit navigation (carrying real
+                `email`/`purpose` params) rather than another fallback
+                guess. That effect, not this declaration order, is the
+                single source of truth for "should this user see
+                verify-otp" — the order here only decides who wins ties
+                on the same tick `(auth)` unmounts, and `(tabs)` winning
+                those ties is always correct because it re-delegates
+                immediately when it isn't.
+              */}
               <Stack.Protected guard={isReady && isAuthenticated}>
                 <Stack.Screen name="(tabs)" />
                 {/*
@@ -146,6 +166,42 @@ export default function RootLayout() {
                 <Stack.Screen name="album/[id]" />
                 <Stack.Screen name="artist/[id]" />
                 <Stack.Screen name="playlist/[id]" />
+              </Stack.Protected>
+
+              {/*
+                verify-otp is reachable from two disjoint auth states —
+                pre-auth (fresh register/forgot-password, where `user` is
+                null so `isEmailVerified` is false) and
+                authenticated-but-unverified — so, like player/lyrics/
+                detail above, it's a top-level route rather than nested
+                in a group gated on `isAuthenticated` either way. Gated
+                on `!isEmailVerified` (not unconditionally `isReady`) so
+                it's never eligible for an already-verified user at all,
+                on top of losing every fallback tie to `(tabs)` per the
+                comment above.
+              */}
+              <Stack.Protected guard={isReady && !isEmailVerified}>
+                <Stack.Screen name="verify-otp" />
+              </Stack.Protected>
+
+              {/*
+                auth-result is gated on `isReady` alone (not
+                `!isEmailVerified`, unlike verify-otp) because it's the
+                one screen that must stay mounted through the exact
+                instant `isEmailVerified` flips true — `verifyOtp()`
+                succeeding is what navigates here in the first place, so
+                tying its guard to that same flag would unmount it out
+                from under itself mid-view. This is now safe from the
+                same focus-stealing bug verify-otp had purely because of
+                declaration order: it's declared *after* `(tabs)` above,
+                so it can never win a fallback tie against `(tabs)` for
+                an authenticated user — it's only ever reached by an
+                explicit push/replace (from verify-otp or
+                reset-password), never by `Stack.Protected` falling back
+                into it.
+              */}
+              <Stack.Protected guard={isReady}>
+                <Stack.Screen name="auth-result" />
               </Stack.Protected>
             </Stack>
           </NavigationThemeProvider>

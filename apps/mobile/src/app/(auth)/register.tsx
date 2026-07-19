@@ -1,5 +1,5 @@
 import { Button, Surface, Text, useTheme, VStack } from '@music-app/design-system';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,8 +47,14 @@ export default function RegisterScreen() {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     try {
+      // No explicit post-register navigation here — same reasoning as
+      // login.tsx's `handleSubmit`. `register()` returns an
+      // authenticated-but-unverified profile, and (tabs)/_layout.tsx's
+      // own redirect effect is the single source of truth for getting
+      // an unverified user to `/verify-otp`; pushing there a second time
+      // from this screen raced that effect and was the actual cause of
+      // the confirmed empty-email-on-verify-otp bug.
       await register({ email, password, displayName });
-      router.push({ pathname: '/verify-otp', params: { email, purpose: 'register' } });
     } catch {
       // Error message already in the store, rendered below.
     }

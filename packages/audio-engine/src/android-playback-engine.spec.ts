@@ -25,6 +25,7 @@ function createFakeNativeModule() {
     repeatMode: 'off',
     shuffleEnabled: false,
     playbackRate: 1,
+    volume: 1,
   };
 
   return {
@@ -43,6 +44,7 @@ function createFakeNativeModule() {
     setRepeatMode: jest.fn().mockResolvedValue(undefined),
     setShuffleEnabled: jest.fn().mockResolvedValue(undefined),
     setPlaybackRate: jest.fn().mockResolvedValue(undefined),
+    setVolume: jest.fn().mockResolvedValue(undefined),
     reorderQueue: jest.fn().mockResolvedValue(undefined),
     getState: jest.fn(() => state),
     // Test helper, not part of the real native module surface: lets a
@@ -76,6 +78,7 @@ function makeNativeState(overrides: Partial<NativePlaybackState> = {}): NativePl
     repeatMode: 'off',
     shuffleEnabled: false,
     playbackRate: 1,
+    volume: 1,
     ...overrides,
   };
 }
@@ -242,7 +245,7 @@ describe('AndroidPlaybackEngine', () => {
     });
   });
 
-  describe('setRepeatMode / setShuffleEnabled / setPlaybackRate', () => {
+  describe('setRepeatMode / setShuffleEnabled / setPlaybackRate / setVolume', () => {
     it('delegates setRepeatMode with the given mode', async () => {
       const engine = new AndroidPlaybackEngine();
       await engine.setRepeatMode('all');
@@ -261,7 +264,13 @@ describe('AndroidPlaybackEngine', () => {
       expect(fakeNativeModule.setPlaybackRate).toHaveBeenCalledWith(1.5);
     });
 
-    it('reflects repeatMode/shuffleEnabled/playbackRate from a native snapshot', () => {
+    it('delegates setVolume with the given value', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.setVolume(0.5);
+      expect(fakeNativeModule.setVolume).toHaveBeenCalledWith(0.5);
+    });
+
+    it('reflects repeatMode/shuffleEnabled/playbackRate/volume from a native snapshot', () => {
       fakeNativeModule.getState.mockReturnValue({
         currentIndex: 0,
         positionMs: 0,
@@ -271,6 +280,7 @@ describe('AndroidPlaybackEngine', () => {
         repeatMode: 'one',
         shuffleEnabled: true,
         playbackRate: 1.25,
+        volume: 0.75,
       });
 
       const engine = new AndroidPlaybackEngine();
@@ -278,6 +288,7 @@ describe('AndroidPlaybackEngine', () => {
         repeatMode: 'one',
         shuffleEnabled: true,
         playbackRate: 1.25,
+        volume: 0.75,
       });
     });
 
@@ -291,6 +302,7 @@ describe('AndroidPlaybackEngine', () => {
         repeatMode: 'not-a-real-mode',
         shuffleEnabled: false,
         playbackRate: 1,
+        volume: 1,
       });
 
       const engine = new AndroidPlaybackEngine();
@@ -323,6 +335,7 @@ describe('AndroidPlaybackEngine', () => {
         repeatMode: 'off',
         shuffleEnabled: false,
         playbackRate: 1,
+        volume: 1,
       });
 
       expect(engine.getState().queue).toEqual([queue[1], queue[0]]);

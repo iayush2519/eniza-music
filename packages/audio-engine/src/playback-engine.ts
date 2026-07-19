@@ -40,6 +40,14 @@ export interface PlaybackEngine {
   setShuffleEnabled(enabled: boolean): Promise<void>;
   /** Sets ExoPlayer's playback speed multiplier (1.0 = normal). */
   setPlaybackRate(rate: number): Promise<void>;
+  /** Sets ExoPlayer's output volume, 0 (silent) to 1 (full) — the
+   * "VolumeControl" docs/design/design-system-specification.md's Full
+   * Player hierarchy names ("VolumeControl_ContextMenuActions"). This is
+   * the player's own in-app volume multiplier (`ExoPlayer.setVolume`),
+   * distinct from the device's hardware volume (which the OS already
+   * exposes its own UI for) — the same distinction every mainstream
+   * player app's in-player volume slider makes. */
+  setVolume(volume: number): Promise<void>;
   /**
    * Moves the queue item at `fromIndex` to `toIndex`, delegating to the
    * native player's own playlist-reorder primitive

@@ -217,6 +217,19 @@ class AudioEngineModule : Module() {
       refreshState()
     }.runOnQueue(Queues.MAIN)
 
+    /**
+     * The player's own in-app output volume (`ExoPlayer.volume`), 0
+     * (silent) to 1 (full) — distinct from the device's hardware
+     * volume, which the OS already provides its own UI for. Clamped
+     * here rather than trusting the JS side's own 0-1 clamp, since this
+     * is the one boundary that actually calls into `ExoPlayer.volume`,
+     * which has undefined behavior outside that range.
+     */
+    AsyncFunction("setVolume") { volume: Double ->
+      player?.volume = volume.toFloat().coerceIn(0f, 1f)
+      refreshState()
+    }.runOnQueue(Queues.MAIN)
+
     AsyncFunction("reorderQueue") { fromIndex: Int, toIndex: Int ->
       player?.moveMediaItem(fromIndex, toIndex)
     }.runOnQueue(Queues.MAIN)
@@ -257,6 +270,7 @@ class AudioEngineModule : Module() {
       "repeatMode" to repeatModeToString(exoPlayer?.repeatMode ?: Player.REPEAT_MODE_OFF),
       "shuffleEnabled" to (exoPlayer?.shuffleModeEnabled ?: false),
       "playbackRate" to (exoPlayer?.playbackParameters?.speed?.toDouble() ?: 1.0),
+      "volume" to (exoPlayer?.volume?.toDouble() ?: 1.0),
     )
   }
 
@@ -290,6 +304,7 @@ class AudioEngineModule : Module() {
     "repeatMode" to "off",
     "shuffleEnabled" to false,
     "playbackRate" to 1.0,
+    "volume" to 1.0,
   )
 
   private fun startPositionSync() {

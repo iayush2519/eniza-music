@@ -59,6 +59,8 @@ export interface PlaybackState {
   shuffleEnabled: boolean;
   /** ExoPlayer's own playback speed multiplier (1.0 = normal speed). */
   playbackRate: number;
+  /** ExoPlayer's own output volume multiplier, 0 (silent) to 1 (full). */
+  volume: number;
 }
 
 /**

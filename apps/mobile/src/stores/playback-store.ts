@@ -41,6 +41,7 @@ type PlaybackStoreState = PlaybackState & {
   setRepeatMode: (mode: RepeatMode) => Promise<void>;
   setShuffleEnabled: (enabled: boolean) => Promise<void>;
   setPlaybackRate: (rate: number) => Promise<void>;
+  setVolume: (volume: number) => Promise<void>;
   reorderQueue: (fromIndex: number, toIndex: number) => Promise<void>;
   /** Cycles off -> all -> one -> off — the standard three-state repeat
    * toggle every mainstream player UI uses for a single repeat button,
@@ -67,6 +68,7 @@ export const usePlaybackStore = create<PlaybackStoreState>((set, get) => {
     setRepeatMode: (mode) => playbackEngine.setRepeatMode(mode),
     setShuffleEnabled: (enabled) => playbackEngine.setShuffleEnabled(enabled),
     setPlaybackRate: (rate) => playbackEngine.setPlaybackRate(rate),
+    setVolume: (volume) => playbackEngine.setVolume(volume),
     reorderQueue: (fromIndex, toIndex) => playbackEngine.reorderQueue(fromIndex, toIndex),
     cycleRepeatMode: () => {
       const currentModeIndex = REPEAT_CYCLE.indexOf(get().repeatMode);

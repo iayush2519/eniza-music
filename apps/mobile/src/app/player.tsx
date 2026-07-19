@@ -7,6 +7,7 @@ import {
   IconButton,
   PressableScale,
   ProgressSeekBar,
+  Slider,
   Surface,
   Text,
   VStack,
@@ -23,9 +24,9 @@ import { QueueSheet } from '@/components/queue-sheet';
 import { SleepTimerSheet } from '@/components/sleep-timer-sheet';
 import { MaxContentWidth } from '@/constants/layout';
 import { formatDuration } from '@/lib/format';
-import { useSleepTimer } from '@/hooks/use-sleep-timer';
 import { useTrackLiked } from '@/hooks/use-track-liked';
 import { usePlaybackStore } from '@/stores/playback-store';
+import { useSleepTimerStore } from '@/stores/sleep-timer-store';
 
 /**
  * The Full Player — "Header(BackArrow, MoreIcon, CastIcon) ->
@@ -65,12 +66,19 @@ export default function PlayerScreen() {
   const skipToPrevious = usePlaybackStore((state) => state.skipToPrevious);
   const cycleRepeatMode = usePlaybackStore((state) => state.cycleRepeatMode);
   const setShuffleEnabled = usePlaybackStore((state) => state.setShuffleEnabled);
+  const volume = usePlaybackStore((state) => state.volume);
+  const setVolume = usePlaybackStore((state) => state.setVolume);
   const reorderQueue = usePlaybackStore((state) => state.reorderQueue);
   const load = usePlaybackStore((state) => state.load);
 
   const currentItem = currentIndex >= 0 ? queue[currentIndex] : undefined;
   const { isLiked, toggle: toggleLiked } = useTrackLiked(currentItem?.trackId);
-  const sleepTimer = useSleepTimer(() => void pause());
+  const isSleepTimerSheetVisible = useSleepTimerStore((state) => state.isSheetVisible);
+  const sleepTimerMinutesRemaining = useSleepTimerStore((state) => state.minutesRemaining);
+  const showSleepTimerSheet = useSleepTimerStore((state) => state.showSheet);
+  const hideSleepTimerSheet = useSleepTimerStore((state) => state.hideSheet);
+  const setSleepTimer = useSleepTimerStore((state) => state.set);
+  const cancelSleepTimer = useSleepTimerStore((state) => state.cancel);
 
   if (!currentItem) {
     // Reaching /player with no active queue (e.g. a stale deep link, or
@@ -94,9 +102,9 @@ export default function PlayerScreen() {
     },
     {
       key: 'sleep-timer',
-      label: sleepTimer.minutesRemaining !== null ? 'Sleep timer (active)' : 'Sleep timer',
+      label: sleepTimerMinutesRemaining !== null ? 'Sleep timer (active)' : 'Sleep timer',
       icon: 'moon',
-      onPress: () => sleepTimer.showSheet(),
+      onPress: () => showSleepTimerSheet(),
     },
     {
       key: 'share',
@@ -229,6 +237,14 @@ export default function PlayerScreen() {
             </PressableScale>
           </HStack>
 
+          <HStack align="center" gap="sm" style={styles.volumeRow}>
+            <Icon name="volume-1" size="sm" color="textSecondary" accessibilityLabel="Volume" />
+            <VStack style={styles.volumeSliderWrapper}>
+              <Slider value={volume} onValueChange={(next) => void setVolume(next)} />
+            </VStack>
+            <Icon name="volume-2" size="sm" color="textSecondary" />
+          </HStack>
+
           <HStack align="center" justify="space-between" style={styles.secondaryRow}>
             <IconButton
               name="heart"
@@ -248,11 +264,11 @@ export default function PlayerScreen() {
       <ContextMenu visible={isMenuVisible} items={menuItems} onDismiss={() => setIsMenuVisible(false)} />
 
       <SleepTimerSheet
-        visible={sleepTimer.isSheetVisible}
-        activeMinutesRemaining={sleepTimer.minutesRemaining}
-        onSet={(minutes) => sleepTimer.set(minutes)}
-        onCancel={() => sleepTimer.cancel()}
-        onDismiss={() => sleepTimer.hideSheet()}
+        visible={isSleepTimerSheetVisible}
+        activeMinutesRemaining={sleepTimerMinutesRemaining}
+        onSet={(minutes) => setSleepTimer(minutes, () => void pause())}
+        onCancel={() => cancelSleepTimer()}
+        onDismiss={() => hideSleepTimerSheet()}
       />
 
       <QueueSheet
@@ -328,6 +344,13 @@ const styles = StyleSheet.create({
     bottom: 2,
     right: 2,
     fontSize: 9,
+  },
+  volumeRow: {
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+  volumeSliderWrapper: {
+    flex: 1,
   },
   secondaryRow: {
     width: '100%',

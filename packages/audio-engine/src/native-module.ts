@@ -32,6 +32,7 @@ export interface NativePlaybackState {
   repeatMode: string;
   shuffleEnabled: boolean;
   playbackRate: number;
+  volume: number;
 }
 
 export type AudioEngineModuleEvents = {
@@ -58,6 +59,7 @@ declare class AudioEngineNativeModule extends NativeModule<AudioEngineModuleEven
   setRepeatMode: (mode: string) => Promise<void>;
   setShuffleEnabled: (enabled: boolean) => Promise<void>;
   setPlaybackRate: (rate: number) => Promise<void>;
+  setVolume: (volume: number) => Promise<void>;
   reorderQueue: (fromIndex: number, toIndex: number) => Promise<void>;
   getState: () => NativePlaybackState;
 }

@@ -42,6 +42,7 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
     repeatMode: 'off',
     shuffleEnabled: false,
     playbackRate: 1,
+    volume: 1,
   };
 
   constructor() {
@@ -96,6 +97,10 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
 
   setPlaybackRate(rate: number): Promise<void> {
     return this.native.setPlaybackRate(rate);
+  }
+
+  setVolume(volume: number): Promise<void> {
+    return this.native.setVolume(volume);
   }
 
   async reorderQueue(fromIndex: number, toIndex: number): Promise<void> {
@@ -156,6 +161,7 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
       repeatMode: normalizeRepeatMode(nativeState.repeatMode),
       shuffleEnabled: nativeState.shuffleEnabled,
       playbackRate: nativeState.playbackRate,
+      volume: nativeState.volume,
     };
   }
 }

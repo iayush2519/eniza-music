@@ -11,6 +11,7 @@ const IDLE_STATE: PlaybackState = {
   repeatMode: 'off',
   shuffleEnabled: false,
   playbackRate: 1,
+  volume: 1,
 };
 
 /**
@@ -36,6 +37,7 @@ function createFakeEngine(): PlaybackEngine & { emit: (state: PlaybackState) => 
     setRepeatMode: jest.fn().mockResolvedValue(undefined),
     setShuffleEnabled: jest.fn().mockResolvedValue(undefined),
     setPlaybackRate: jest.fn().mockResolvedValue(undefined),
+    setVolume: jest.fn().mockResolvedValue(undefined),
     reorderQueue: jest.fn().mockResolvedValue(undefined),
     getState: jest.fn(() => state),
     subscribe: jest.fn((cb: StateListener) => {
@@ -96,6 +98,7 @@ describe('usePlaybackStore', () => {
       repeatMode: 'off',
       shuffleEnabled: false,
       playbackRate: 1,
+      volume: 1,
     };
 
     fakeEngine.emit(playingState);
@@ -155,6 +158,7 @@ describe('usePlaybackStore', () => {
       repeatMode: 'off',
       shuffleEnabled: false,
       playbackRate: 1,
+      volume: 1,
     });
 
     expect(usePlaybackStore.getState()).toMatchObject({
@@ -163,7 +167,7 @@ describe('usePlaybackStore', () => {
     });
   });
 
-  describe('setRepeatMode / setShuffleEnabled / setPlaybackRate / reorderQueue', () => {
+  describe('setRepeatMode / setShuffleEnabled / setPlaybackRate / setVolume / reorderQueue', () => {
     it('delegates setRepeatMode to the engine', async () => {
       await usePlaybackStore.getState().setRepeatMode('all');
       expect(fakeEngine.setRepeatMode).toHaveBeenCalledWith('all');
@@ -177,6 +181,11 @@ describe('usePlaybackStore', () => {
     it('delegates setPlaybackRate to the engine', async () => {
       await usePlaybackStore.getState().setPlaybackRate(1.5);
       expect(fakeEngine.setPlaybackRate).toHaveBeenCalledWith(1.5);
+    });
+
+    it('delegates setVolume to the engine', async () => {
+      await usePlaybackStore.getState().setVolume(0.5);
+      expect(fakeEngine.setVolume).toHaveBeenCalledWith(0.5);
     });
 
     it('delegates reorderQueue to the engine', async () => {

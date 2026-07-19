@@ -1,4 +1,4 @@
-import { Button, EmptyState, ErrorState, HStack, Skeleton, SkeletonRow, Surface, Text, VStack } from '@music-app/design-system';
+import { Button, EmptyState, ErrorState, HStack, IconButton, Skeleton, SkeletonRow, Surface, Text, VStack } from '@music-app/design-system';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,7 @@ import { Header } from '@/components/header';
 import { MiniPlayer } from '@/components/mini-player';
 import { TrackRow } from '@/components/track-row';
 import { BottomTabInset, MaxContentWidth } from '@/constants/layout';
+import { useIsAlbumSaved, useToggleSavedAlbum } from '@/hooks/use-album-saved';
 import { useArtistNameMap } from '@/hooks/use-artist-name-map';
 import { apiClient } from '@/lib/api-client';
 import { buildResolvedQueue } from '@/lib/play-queue';
@@ -53,6 +54,9 @@ export default function AlbumDetailScreen() {
   const album = albumQuery.data;
   const tracks = tracksQuery.data ?? [];
   const artistName = album ? artistNames.get(album.artistId) : undefined;
+
+  const isSaved = useIsAlbumSaved(album?.id);
+  const toggleSavedAlbum = useToggleSavedAlbum();
 
   const playTrack = async (index: number) => {
     const { queue, startIndex } = await buildResolvedQueue(tracks, index, artistNames);
@@ -118,13 +122,19 @@ export default function AlbumDetailScreen() {
                     </Text>
                   ) : null}
                 </VStack>
-                {tracks.length > 0 ? (
-                  <HStack gap="sm" style={styles.actionsRow}>
+                <HStack gap="sm" align="center" style={styles.actionsRow}>
+                  {tracks.length > 0 ? (
                     <Button style={styles.playAllButton} onPress={() => void playTrack(0)}>
                       Play
                     </Button>
-                  </HStack>
-                ) : null}
+                  ) : null}
+                  <IconButton
+                    name="heart"
+                    accessibilityLabel={isSaved ? 'Remove from library' : 'Save to library'}
+                    color={isSaved ? 'accent' : 'textSecondary'}
+                    onPress={() => toggleSavedAlbum.mutate({ album, isSaved })}
+                  />
+                </HStack>
               </VStack>
             }
             ListEmptyComponent={

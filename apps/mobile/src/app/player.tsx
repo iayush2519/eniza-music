@@ -217,11 +217,10 @@ export default function PlayerScreen() {
                     : 'Repeat one (tap to disable)'
               }
               style={styles.repeatButton}>
-              <Icon
-                name={repeatMode === 'one' ? 'repeat' : 'repeat'}
-                size="md"
-                color={repeatMode === 'off' ? 'textSecondary' : 'accent'}
-              />
+              {/* Feather has no distinct "repeat-one" glyph — the small
+                  "1" badge below is what disambiguates that state from
+                  plain "repeat all", not the icon itself. */}
+              <Icon name="repeat" size="md" color={repeatMode === 'off' ? 'textSecondary' : 'accent'} />
               {repeatMode === 'one' ? (
                 <Text variant="caption" color="accent" style={styles.repeatOneBadge}>
                   1

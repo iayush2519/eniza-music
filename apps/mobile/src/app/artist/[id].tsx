@@ -98,7 +98,12 @@ export default function ArtistDetailScreen() {
                   />
                 </VStack>
 
-                {topTracks.length > 0 ? (
+                {tracksQuery.isLoading ? (
+                  <VStack gap="sm">
+                    <SkeletonRow />
+                    <SkeletonRow />
+                  </VStack>
+                ) : topTracks.length > 0 ? (
                   <VStack gap="sm">
                     <Text variant="bodyStrong">Top songs</Text>
                     <VStack gap="sm">
@@ -115,11 +120,17 @@ export default function ArtistDetailScreen() {
                   </VStack>
                 ) : null}
 
-                {albums.length > 0 ? <Text variant="bodyStrong">Albums</Text> : null}
+                {albumsQuery.isLoading ? null : albums.length > 0 ? <Text variant="bodyStrong">Albums</Text> : null}
               </VStack>
             }
             ListEmptyComponent={
-              !tracksQuery.isLoading && topTracks.length === 0 ? (
+              // Guards on both queries' `isLoading`, not just tracks' —
+              // a real edge case otherwise: if tracks resolves to an
+              // empty list before albums does, this would flash (or on a
+              // slow albums response, persistently show) "Nothing here
+              // yet" even though albums might still load in with
+              // content, since only tracks' loading state gated it.
+              !tracksQuery.isLoading && !albumsQuery.isLoading && topTracks.length === 0 && albums.length === 0 ? (
                 <EmptyState icon="disc" title="Nothing here yet" description="This artist has no cached albums or tracks." />
               ) : null
             }

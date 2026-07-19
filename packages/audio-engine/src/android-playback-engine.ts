@@ -1,6 +1,6 @@
 import type { PlaybackEngine } from './playback-engine';
 import { loadAudioEngineNativeModule, NativePlaybackState, NativeQueueItem } from './native-module';
-import type { PlaybackState, PlaybackStatus, QueueItem } from './types';
+import type { PlaybackState, PlaybackStatus, QueueItem, RepeatMode } from './types';
 
 const VALID_STATUSES: readonly PlaybackStatus[] = [
   'idle',
@@ -12,6 +12,8 @@ const VALID_STATUSES: readonly PlaybackStatus[] = [
   'ended',
   'error',
 ];
+
+const VALID_REPEAT_MODES: readonly RepeatMode[] = ['off', 'one', 'all'];
 
 /**
  * The first real `PlaybackEngine` implementation — Android, backed by
@@ -37,6 +39,9 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
     durationMs: 0,
     status: 'idle',
     error: null,
+    repeatMode: 'off',
+    shuffleEnabled: false,
+    playbackRate: 1,
   };
 
   constructor() {
@@ -81,6 +86,40 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
     return this.native.skipToPrevious();
   }
 
+  setRepeatMode(mode: RepeatMode): Promise<void> {
+    return this.native.setRepeatMode(mode);
+  }
+
+  setShuffleEnabled(enabled: boolean): Promise<void> {
+    return this.native.setShuffleEnabled(enabled);
+  }
+
+  setPlaybackRate(rate: number): Promise<void> {
+    return this.native.setPlaybackRate(rate);
+  }
+
+  reorderQueue(fromIndex: number, toIndex: number): Promise<void> {
+    // Mirrors the queue array locally too — the same way `load`/
+    // `setQueue` keep `this.queue` in sync with what the native side
+    // holds, since native state snapshots never carry back title/artist/
+    // artwork metadata (see this class's own module doc).
+    if (
+      fromIndex >= 0 &&
+      fromIndex < this.queue.length &&
+      toIndex >= 0 &&
+      toIndex < this.queue.length &&
+      fromIndex !== toIndex
+    ) {
+      const next = [...this.queue];
+      const [moved] = next.splice(fromIndex, 1);
+      if (moved) {
+        next.splice(toIndex, 0, moved);
+        this.queue = next;
+      }
+    }
+    return this.native.reorderQueue(fromIndex, toIndex);
+  }
+
   getState(): PlaybackState {
     return this.toPlaybackState(this.native.getState());
   }
@@ -104,6 +143,9 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
       positionMs: nativeState.positionMs,
       status: normalizeStatus(nativeState.status),
       error: nativeState.error,
+      repeatMode: normalizeRepeatMode(nativeState.repeatMode),
+      shuffleEnabled: nativeState.shuffleEnabled,
+      playbackRate: nativeState.playbackRate,
     };
   }
 }
@@ -124,4 +166,14 @@ function normalizeStatus(status: string): PlaybackStatus {
     return status as PlaybackStatus;
   }
   return 'error';
+}
+
+/** Same defensive normalization as `normalizeStatus`, defaulting to
+ * `'off'` (the safest fallback — never silently repeats audio the user
+ * didn't ask to repeat) rather than throwing on an unrecognized value. */
+function normalizeRepeatMode(mode: string): RepeatMode {
+  if ((VALID_REPEAT_MODES as readonly string[]).includes(mode)) {
+    return mode as RepeatMode;
+  }
+  return 'off';
 }

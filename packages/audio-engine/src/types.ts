@@ -18,6 +18,16 @@ export type PlaybackStatus =
   | 'error';
 
 /**
+ * Mirrors ExoPlayer's own repeat-mode primitive (`Player.REPEAT_MODE_*`)
+ * one-to-one — per playback-engine.ts's existing rule that queue
+ * navigation/repeat lives in the native engine, not JS-side
+ * reimplementation, repeat is a command the engine executes on its own
+ * playlist, not something the app computes by rewriting `currentIndex`.
+ * `'one'` repeats the current item; `'all'` repeats the whole queue.
+ */
+export type RepeatMode = 'off' | 'one' | 'all';
+
+/**
  * One playable entry in a queue. `streamUrl` is populated lazily —  a
  * queue item starts with `streamUrl: null` until `resolveQueueItemStream`
  * (see stream-resolver.ts) resolves it against the backend's
@@ -45,6 +55,10 @@ export interface PlaybackState {
   positionMs: number;
   status: PlaybackStatus;
   error: string | null;
+  repeatMode: RepeatMode;
+  shuffleEnabled: boolean;
+  /** ExoPlayer's own playback speed multiplier (1.0 = normal speed). */
+  playbackRate: number;
 }
 
 /**

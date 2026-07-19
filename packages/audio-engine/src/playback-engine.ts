@@ -1,4 +1,4 @@
-import type { PlaybackState, QueueItem } from './types';
+import type { PlaybackState, QueueItem, RepeatMode } from './types';
 
 /**
  * The platform-abstraction boundary described in
@@ -32,6 +32,23 @@ export interface PlaybackEngine {
   skipToNext(): Promise<void>;
   skipToPrevious(): Promise<void>;
   setQueue(queue: QueueItem[]): Promise<void>;
+  /** Sets the engine's repeat mode — see `RepeatMode`'s own doc comment
+   * for why this is a native command, not JS-side index arithmetic. */
+  setRepeatMode(mode: RepeatMode): Promise<void>;
+  /** Toggles the engine's own shuffle-ordering of the queue, same
+   * "native owns queue navigation" rule as `setRepeatMode`. */
+  setShuffleEnabled(enabled: boolean): Promise<void>;
+  /** Sets ExoPlayer's playback speed multiplier (1.0 = normal). */
+  setPlaybackRate(rate: number): Promise<void>;
+  /**
+   * Moves the queue item at `fromIndex` to `toIndex`, delegating to the
+   * native player's own playlist-reorder primitive
+   * (`ExoPlayer.moveMediaItem`) rather than rebuilding the whole queue
+   * via `setQueue` — preserves playback position/state exactly, the same
+   * reasoning `setQueue` itself already documents for not resetting
+   * position on a queue replacement.
+   */
+  reorderQueue(fromIndex: number, toIndex: number): Promise<void>;
   /** A synchronous snapshot of the current state. */
   getState(): PlaybackState;
   /** Registers a listener for state changes; returns an unsubscribe function. */

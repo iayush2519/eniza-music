@@ -64,6 +64,9 @@ const IDLE_STATE: PlaybackState = {
   positionMs: 0,
   status: 'idle',
   error: null,
+  repeatMode: 'off',
+  shuffleEnabled: false,
+  playbackRate: 1,
 };
 
 describe('subscribeToPlaybackProgress', () => {
@@ -149,6 +152,9 @@ describe('subscribeToPlaybackProgress', () => {
         positionMs: 10_000,
         status: 'playing',
         error: null,
+        repeatMode: 'off',
+        shuffleEnabled: false,
+        playbackRate: 1,
       };
       const store = createFakeStore(alreadyPlaying);
       const reportProgress = jest.fn();

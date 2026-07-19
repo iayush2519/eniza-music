@@ -1,4 +1,4 @@
-import type { PlaybackState, QueueItem } from '@music-app/audio-engine';
+import type { PlaybackState, QueueItem, RepeatMode } from '@music-app/audio-engine';
 import { create } from 'zustand';
 
 import { playbackEngine } from '@/lib/playback-engine';
@@ -38,9 +38,20 @@ type PlaybackStoreState = PlaybackState & {
   seekTo: (positionMs: number) => Promise<void>;
   skipToNext: () => Promise<void>;
   skipToPrevious: () => Promise<void>;
+  setRepeatMode: (mode: RepeatMode) => Promise<void>;
+  setShuffleEnabled: (enabled: boolean) => Promise<void>;
+  setPlaybackRate: (rate: number) => Promise<void>;
+  reorderQueue: (fromIndex: number, toIndex: number) => Promise<void>;
+  /** Cycles off -> all -> one -> off — the standard three-state repeat
+   * toggle every mainstream player UI uses for a single repeat button,
+   * rather than requiring three separate controls. Pure UI convenience
+   * built on top of `setRepeatMode`, not a new engine capability. */
+  cycleRepeatMode: () => Promise<void>;
 };
 
-export const usePlaybackStore = create<PlaybackStoreState>((set) => {
+const REPEAT_CYCLE: readonly RepeatMode[] = ['off', 'all', 'one'];
+
+export const usePlaybackStore = create<PlaybackStoreState>((set, get) => {
   playbackEngine.subscribe((state) => set(state));
 
   return {
@@ -53,5 +64,14 @@ export const usePlaybackStore = create<PlaybackStoreState>((set) => {
     seekTo: (positionMs) => playbackEngine.seekTo(positionMs),
     skipToNext: () => playbackEngine.skipToNext(),
     skipToPrevious: () => playbackEngine.skipToPrevious(),
+    setRepeatMode: (mode) => playbackEngine.setRepeatMode(mode),
+    setShuffleEnabled: (enabled) => playbackEngine.setShuffleEnabled(enabled),
+    setPlaybackRate: (rate) => playbackEngine.setPlaybackRate(rate),
+    reorderQueue: (fromIndex, toIndex) => playbackEngine.reorderQueue(fromIndex, toIndex),
+    cycleRepeatMode: () => {
+      const currentModeIndex = REPEAT_CYCLE.indexOf(get().repeatMode);
+      const nextMode = REPEAT_CYCLE[(currentModeIndex + 1) % REPEAT_CYCLE.length];
+      return playbackEngine.setRepeatMode(nextMode);
+    },
   };
 });

@@ -171,6 +171,45 @@ class AudioEngineModule : Module() {
       player?.seekToPreviousMediaItem()
     }.runOnQueue(Queues.MAIN)
 
+    /**
+     * `mode` is one of the JS-side `RepeatMode` union's string values
+     * ('off'/'one'/'all') — translated to ExoPlayer's own
+     * `Player.REPEAT_MODE_*` int constants here, at the one boundary
+     * that needs to know both representations, rather than exposing
+     * ExoPlayer's raw ints to JS.
+     */
+    AsyncFunction("setRepeatMode") { mode: String ->
+      player?.repeatMode = when (mode) {
+        "one" -> Player.REPEAT_MODE_ONE
+        "all" -> Player.REPEAT_MODE_ALL
+        else -> Player.REPEAT_MODE_OFF
+      }
+      refreshState()
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("setShuffleEnabled") { enabled: Boolean ->
+      player?.shuffleModeEnabled = enabled
+      refreshState()
+    }.runOnQueue(Queues.MAIN)
+
+    /**
+     * ExoPlayer's `setPlaybackSpeed` also affects pitch by default
+     * (`PlaybackParameters(speed)` ties speed and pitch together) —
+     * acceptable here since this module has no separate pitch-correction
+     * requirement; a "speed without pitch shift" mode would need
+     * `PlaybackParameters(speed, pitch = 1f)` plus a specific audio
+     * processor, which is out of scope unless a future milestone calls
+     * for it specifically.
+     */
+    AsyncFunction("setPlaybackRate") { rate: Double ->
+      player?.setPlaybackSpeed(rate.toFloat())
+      refreshState()
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("reorderQueue") { fromIndex: Int, toIndex: Int ->
+      player?.moveMediaItem(fromIndex, toIndex)
+    }.runOnQueue(Queues.MAIN)
+
     Function("getState") {
       currentState
     }
@@ -204,7 +243,16 @@ class AudioEngineModule : Module() {
       "durationMs" to (exoPlayer?.duration?.takeIf { it >= 0 }?.toDouble() ?: 0.0),
       "status" to resolvedStatus,
       "error" to error,
+      "repeatMode" to repeatModeToString(exoPlayer?.repeatMode ?: Player.REPEAT_MODE_OFF),
+      "shuffleEnabled" to (exoPlayer?.shuffleModeEnabled ?: false),
+      "playbackRate" to (exoPlayer?.playbackParameters?.speed?.toDouble() ?: 1.0),
     )
+  }
+
+  private fun repeatModeToString(mode: Int): String = when (mode) {
+    Player.REPEAT_MODE_ONE -> "one"
+    Player.REPEAT_MODE_ALL -> "all"
+    else -> "off"
   }
 
   private fun computeStatus(exoPlayer: ExoPlayer?): String {
@@ -228,6 +276,9 @@ class AudioEngineModule : Module() {
     "durationMs" to 0.0,
     "status" to "idle",
     "error" to null,
+    "repeatMode" to "off",
+    "shuffleEnabled" to false,
+    "playbackRate" to 1.0,
   )
 
   private fun startPositionSync() {

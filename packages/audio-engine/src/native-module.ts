@@ -25,6 +25,13 @@ export interface NativePlaybackState {
   durationMs: number;
   status: string;
   error: string | null;
+  /** ExoPlayer's own repeat-mode constant, already normalized to the
+   * JS-side string union by the Kotlin module (never the raw
+   * `Player.REPEAT_MODE_*` int) — see `AudioEngineModule.kt`'s
+   * `buildState`. */
+  repeatMode: string;
+  shuffleEnabled: boolean;
+  playbackRate: number;
 }
 
 export type AudioEngineModuleEvents = {
@@ -48,6 +55,10 @@ declare class AudioEngineNativeModule extends NativeModule<AudioEngineModuleEven
   seekTo: (positionMs: number) => Promise<void>;
   skipToNext: () => Promise<void>;
   skipToPrevious: () => Promise<void>;
+  setRepeatMode: (mode: string) => Promise<void>;
+  setShuffleEnabled: (enabled: boolean) => Promise<void>;
+  setPlaybackRate: (rate: number) => Promise<void>;
+  reorderQueue: (fromIndex: number, toIndex: number) => Promise<void>;
   getState: () => NativePlaybackState;
 }
 

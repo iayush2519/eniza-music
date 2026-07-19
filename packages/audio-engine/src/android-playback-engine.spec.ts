@@ -22,6 +22,9 @@ function createFakeNativeModule() {
     durationMs: 0,
     status: 'idle',
     error: null,
+    repeatMode: 'off',
+    shuffleEnabled: false,
+    playbackRate: 1,
   };
 
   return {
@@ -37,6 +40,10 @@ function createFakeNativeModule() {
     seekTo: jest.fn().mockResolvedValue(undefined),
     skipToNext: jest.fn().mockResolvedValue(undefined),
     skipToPrevious: jest.fn().mockResolvedValue(undefined),
+    setRepeatMode: jest.fn().mockResolvedValue(undefined),
+    setShuffleEnabled: jest.fn().mockResolvedValue(undefined),
+    setPlaybackRate: jest.fn().mockResolvedValue(undefined),
+    reorderQueue: jest.fn().mockResolvedValue(undefined),
     getState: jest.fn(() => state),
     // Test helper, not part of the real native module surface: lets a
     // test simulate the native side emitting a new state.
@@ -54,6 +61,24 @@ jest.mock('./native-module', () => ({
 }));
 
 import { AndroidPlaybackEngine } from './android-playback-engine';
+
+/** A complete `NativePlaybackState`, so every test only needs to specify
+ * the fields it actually cares about via `{ ...makeNativeState(), ... }`
+ * rather than repeating every field (including the ones this spec added
+ * for repeat/shuffle/speed) at every call site. */
+function makeNativeState(overrides: Partial<NativePlaybackState> = {}): NativePlaybackState {
+  return {
+    currentIndex: -1,
+    positionMs: 0,
+    durationMs: 0,
+    status: 'idle',
+    error: null,
+    repeatMode: 'off',
+    shuffleEnabled: false,
+    playbackRate: 1,
+    ...overrides,
+  };
+}
 
 function createQueue(): QueueItem[] {
   return [
@@ -102,7 +127,7 @@ describe('AndroidPlaybackEngine', () => {
       const queue = createQueue();
       await engine.load(queue, 0);
 
-      fakeNativeModule.emit({ currentIndex: 0, positionMs: 0, durationMs: 244_000, status: 'ready', error: null });
+      fakeNativeModule.emit(makeNativeState({ currentIndex: 0, durationMs: 244_000, status: 'ready' }));
 
       expect(engine.getState().queue).toEqual(queue);
     });
@@ -145,13 +170,9 @@ describe('AndroidPlaybackEngine', () => {
 
   describe('getState', () => {
     it('maps a native snapshot into a PlaybackState', () => {
-      fakeNativeModule.getState.mockReturnValue({
-        currentIndex: 1,
-        positionMs: 12_000,
-        durationMs: 259_000,
-        status: 'playing',
-        error: null,
-      });
+      fakeNativeModule.getState.mockReturnValue(
+        makeNativeState({ currentIndex: 1, positionMs: 12_000, durationMs: 259_000, status: 'playing' }),
+      );
 
       const engine = new AndroidPlaybackEngine();
       const state = engine.getState();
@@ -165,13 +186,7 @@ describe('AndroidPlaybackEngine', () => {
     });
 
     it('normalizes an unrecognized native status to "error" rather than throwing', () => {
-      fakeNativeModule.getState.mockReturnValue({
-        currentIndex: 0,
-        positionMs: 0,
-        durationMs: 0,
-        status: 'not-a-real-status',
-        error: null,
-      });
+      fakeNativeModule.getState.mockReturnValue(makeNativeState({ status: 'not-a-real-status' }));
 
       const engine = new AndroidPlaybackEngine();
       expect(engine.getState().status).toBe('error');
@@ -184,13 +199,9 @@ describe('AndroidPlaybackEngine', () => {
       const listener = jest.fn();
       engine.subscribe(listener);
 
-      fakeNativeModule.emit({
-        currentIndex: 0,
-        positionMs: 5_000,
-        durationMs: 244_000,
-        status: 'buffering',
-        error: null,
-      });
+      fakeNativeModule.emit(
+        makeNativeState({ currentIndex: 0, positionMs: 5_000, durationMs: 244_000, status: 'buffering' }),
+      );
 
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'buffering', positionMs: 5_000 }),
@@ -203,13 +214,9 @@ describe('AndroidPlaybackEngine', () => {
       const unsubscribe = engine.subscribe(listener);
       unsubscribe();
 
-      fakeNativeModule.emit({
-        currentIndex: 0,
-        positionMs: 1_000,
-        durationMs: 244_000,
-        status: 'playing',
-        error: null,
-      });
+      fakeNativeModule.emit(
+        makeNativeState({ currentIndex: 0, positionMs: 1_000, durationMs: 244_000, status: 'playing' }),
+      );
 
       expect(listener).not.toHaveBeenCalled();
     });
@@ -232,6 +239,106 @@ describe('AndroidPlaybackEngine', () => {
       const engine = new AndroidPlaybackEngine();
       await engine.skipToPrevious();
       expect(fakeNativeModule.skipToPrevious).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('setRepeatMode / setShuffleEnabled / setPlaybackRate', () => {
+    it('delegates setRepeatMode with the given mode', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.setRepeatMode('all');
+      expect(fakeNativeModule.setRepeatMode).toHaveBeenCalledWith('all');
+    });
+
+    it('delegates setShuffleEnabled with the given value', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.setShuffleEnabled(true);
+      expect(fakeNativeModule.setShuffleEnabled).toHaveBeenCalledWith(true);
+    });
+
+    it('delegates setPlaybackRate with the given rate', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.setPlaybackRate(1.5);
+      expect(fakeNativeModule.setPlaybackRate).toHaveBeenCalledWith(1.5);
+    });
+
+    it('reflects repeatMode/shuffleEnabled/playbackRate from a native snapshot', () => {
+      fakeNativeModule.getState.mockReturnValue({
+        currentIndex: 0,
+        positionMs: 0,
+        durationMs: 0,
+        status: 'playing',
+        error: null,
+        repeatMode: 'one',
+        shuffleEnabled: true,
+        playbackRate: 1.25,
+      });
+
+      const engine = new AndroidPlaybackEngine();
+      expect(engine.getState()).toMatchObject({
+        repeatMode: 'one',
+        shuffleEnabled: true,
+        playbackRate: 1.25,
+      });
+    });
+
+    it('normalizes an unrecognized native repeatMode to "off" rather than throwing', () => {
+      fakeNativeModule.getState.mockReturnValue({
+        currentIndex: 0,
+        positionMs: 0,
+        durationMs: 0,
+        status: 'idle',
+        error: null,
+        repeatMode: 'not-a-real-mode',
+        shuffleEnabled: false,
+        playbackRate: 1,
+      });
+
+      const engine = new AndroidPlaybackEngine();
+      expect(engine.getState().repeatMode).toBe('off');
+    });
+  });
+
+  describe('reorderQueue', () => {
+    it('delegates to the native module with the given indices', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.load(createQueue(), 0);
+      await engine.reorderQueue(0, 1);
+
+      expect(fakeNativeModule.reorderQueue).toHaveBeenCalledWith(0, 1);
+    });
+
+    it('reorders the locally retained queue metadata to match', async () => {
+      const engine = new AndroidPlaybackEngine();
+      const queue = createQueue();
+      await engine.load(queue, 0);
+
+      await engine.reorderQueue(0, 1);
+
+      fakeNativeModule.emit({
+        currentIndex: 1,
+        positionMs: 0,
+        durationMs: 259_000,
+        status: 'playing',
+        error: null,
+        repeatMode: 'off',
+        shuffleEnabled: false,
+        playbackRate: 1,
+      });
+
+      expect(engine.getState().queue).toEqual([queue[1], queue[0]]);
+    });
+
+    it('ignores an out-of-range index without throwing or calling the native module incorrectly', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.load(createQueue(), 0);
+
+      await expect(engine.reorderQueue(0, 99)).resolves.toBeUndefined();
+      expect(fakeNativeModule.reorderQueue).toHaveBeenCalledWith(0, 99);
+      // Local queue metadata is left untouched since the target index
+      // was invalid -- the native call itself may still no-op or throw
+      // internally, but this class must not corrupt its own retained
+      // queue array in response.
+      expect(engine.getState().queue).toEqual(createQueue());
     });
   });
 });

@@ -8,6 +8,9 @@ const IDLE_STATE: PlaybackState = {
   positionMs: 0,
   status: 'idle',
   error: null,
+  repeatMode: 'off',
+  shuffleEnabled: false,
+  playbackRate: 1,
 };
 
 /**
@@ -30,6 +33,10 @@ function createFakeEngine(): PlaybackEngine & { emit: (state: PlaybackState) => 
     seekTo: jest.fn().mockResolvedValue(undefined),
     skipToNext: jest.fn().mockResolvedValue(undefined),
     skipToPrevious: jest.fn().mockResolvedValue(undefined),
+    setRepeatMode: jest.fn().mockResolvedValue(undefined),
+    setShuffleEnabled: jest.fn().mockResolvedValue(undefined),
+    setPlaybackRate: jest.fn().mockResolvedValue(undefined),
+    reorderQueue: jest.fn().mockResolvedValue(undefined),
     getState: jest.fn(() => state),
     subscribe: jest.fn((cb: StateListener) => {
       listener = cb;
@@ -86,6 +93,9 @@ describe('usePlaybackStore', () => {
       positionMs: 5_000,
       status: 'playing',
       error: null,
+      repeatMode: 'off',
+      shuffleEnabled: false,
+      playbackRate: 1,
     };
 
     fakeEngine.emit(playingState);
@@ -142,11 +152,56 @@ describe('usePlaybackStore', () => {
       positionMs: 0,
       status: 'error',
       error: 'Playback failed',
+      repeatMode: 'off',
+      shuffleEnabled: false,
+      playbackRate: 1,
     });
 
     expect(usePlaybackStore.getState()).toMatchObject({
       status: 'error',
       error: 'Playback failed',
+    });
+  });
+
+  describe('setRepeatMode / setShuffleEnabled / setPlaybackRate / reorderQueue', () => {
+    it('delegates setRepeatMode to the engine', async () => {
+      await usePlaybackStore.getState().setRepeatMode('all');
+      expect(fakeEngine.setRepeatMode).toHaveBeenCalledWith('all');
+    });
+
+    it('delegates setShuffleEnabled to the engine', async () => {
+      await usePlaybackStore.getState().setShuffleEnabled(true);
+      expect(fakeEngine.setShuffleEnabled).toHaveBeenCalledWith(true);
+    });
+
+    it('delegates setPlaybackRate to the engine', async () => {
+      await usePlaybackStore.getState().setPlaybackRate(1.5);
+      expect(fakeEngine.setPlaybackRate).toHaveBeenCalledWith(1.5);
+    });
+
+    it('delegates reorderQueue to the engine', async () => {
+      await usePlaybackStore.getState().reorderQueue(0, 2);
+      expect(fakeEngine.reorderQueue).toHaveBeenCalledWith(0, 2);
+    });
+  });
+
+  describe('cycleRepeatMode', () => {
+    it('cycles off -> all', async () => {
+      fakeEngine.emit({ ...IDLE_STATE, repeatMode: 'off' });
+      await usePlaybackStore.getState().cycleRepeatMode();
+      expect(fakeEngine.setRepeatMode).toHaveBeenCalledWith('all');
+    });
+
+    it('cycles all -> one', async () => {
+      fakeEngine.emit({ ...IDLE_STATE, repeatMode: 'all' });
+      await usePlaybackStore.getState().cycleRepeatMode();
+      expect(fakeEngine.setRepeatMode).toHaveBeenCalledWith('one');
+    });
+
+    it('cycles one -> off', async () => {
+      fakeEngine.emit({ ...IDLE_STATE, repeatMode: 'one' });
+      await usePlaybackStore.getState().cycleRepeatMode();
+      expect(fakeEngine.setRepeatMode).toHaveBeenCalledWith('off');
     });
   });
 });

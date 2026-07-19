@@ -1,81 +1,130 @@
-import { Button, Surface, Text } from '@music-app/design-system';
-import { Link } from 'expo-router';
+import { Button, Surface, Text, useTheme, VStack } from '@music-app/design-system';
+import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TextField } from '@/components/text-field';
+import { AuthBrandHeader } from '@/components/auth-brand-header';
+import { AuthTextField } from '@/components/auth-text-field';
 import { MaxContentWidth } from '@/constants/layout';
 import { useAuthStore } from '@/stores/auth-store';
 
+/** Mirrors the backend's own rule exactly (see
+ * apps/api/src/auth/dto/register.dto.ts) so a request that would be
+ * rejected server-side is caught before the round-trip, rather than the
+ * user only discovering it from a 400 response. */
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,128}$/;
+const PASSWORD_HINT = 'At least 8 characters, with an uppercase letter, a lowercase letter, and a number.';
+
+/**
+ * Retheme note: this screen previously used the plain, unstyled
+ * `TextField` (a leftover from before `AuthTextField`/`AuthBrandHeader`
+ * existed) while Login had already moved to them — a real inconsistency
+ * flagged during the Phase 2 audit. Rebuilt here on the same components
+ * Login uses, so both auth screens now share one visual/interaction
+ * language, per "reuse existing components wherever possible."
+ *
+ * On success, routes to VerifyOtp (register purpose) rather than
+ * straight into the app — registering already returns valid tokens (see
+ * AuthService.register), but the approved UI board's Authentication
+ * Flow places email verification directly after Register, before the
+ * app is considered fully entered.
+ */
 export default function RegisterScreen() {
+  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [isAnyFieldFocused, setIsAnyFieldFocused] = useState(false);
   const register = useAuthStore((state) => state.register);
   const isSubmitting = useAuthStore((state) => state.isSubmitting);
   const error = useAuthStore((state) => state.error);
 
-  const canSubmit = email.length > 0 && password.length > 0 && displayName.length > 0 && !isSubmitting;
+  const isPasswordValid = PASSWORD_PATTERN.test(password);
+  const canSubmit =
+    email.length > 0 && displayName.length > 0 && isPasswordValid && !isSubmitting;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    void register({ email, password, displayName });
+    try {
+      await register({ email, password, displayName });
+      router.push({ pathname: '/(auth)/verify-otp', params: { email, purpose: 'register' } });
+    } catch {
+      // Error message already in the store, rendered below.
+    }
   };
 
   return (
     <Surface style={styles.root}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SafeAreaView style={styles.safeArea}>
-          <Text variant="title" style={styles.centerText}>
-            Create your account
-          </Text>
+          <AuthBrandHeader tagline="Create your account" isPulsing={!isAnyFieldFocused} />
 
-          <TextField
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder="Display name"
-            autoCapitalize="words"
-            testID="register-display-name-input"
-          />
-          <TextField
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            testID="register-email-input"
-          />
-          <TextField
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            secureTextEntry
-            autoCapitalize="none"
-            testID="register-password-input"
-          />
-          <Text variant="caption" color="textSecondary">
-            At least 8 characters, with an uppercase letter, a lowercase letter, and a number.
-          </Text>
+          <VStack gap="lg">
+            <AuthTextField
+              label="Display name"
+              icon="user"
+              value={displayName}
+              onChangeText={setDisplayName}
+              onFocus={() => setIsAnyFieldFocused(true)}
+              onBlur={() => setIsAnyFieldFocused(false)}
+              autoCapitalize="words"
+              hasError={Boolean(error)}
+              testID="register-display-name-input"
+            />
+            <AuthTextField
+              label="Email"
+              icon="mail"
+              value={email}
+              onChangeText={setEmail}
+              onFocus={() => setIsAnyFieldFocused(true)}
+              onBlur={() => setIsAnyFieldFocused(false)}
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              hasError={Boolean(error)}
+              testID="register-email-input"
+            />
+            <VStack gap="xs">
+              <AuthTextField
+                label="Password"
+                icon="lock"
+                isPassword
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setIsAnyFieldFocused(true)}
+                onBlur={() => setIsAnyFieldFocused(false)}
+                autoCapitalize="none"
+                hasError={Boolean(error)}
+                testID="register-password-input"
+              />
+              <Text variant="caption" color="textSecondary">
+                {PASSWORD_HINT}
+              </Text>
+            </VStack>
 
-          {error ? (
-            <Text color="danger" variant="label">
-              {error}
-            </Text>
-          ) : null}
+            {error ? (
+              <Text color="danger" variant="label" accessibilityLiveRegion="polite">
+                {error}
+              </Text>
+            ) : null}
 
-          <Button onPress={handleSubmit} disabled={!canSubmit}>
-            {isSubmitting ? 'Creating account...' : 'Create account'}
-          </Button>
+            <Button
+              onPress={() => void handleSubmit()}
+              disabled={!canSubmit}
+              loading={isSubmitting}
+              style={{ marginTop: theme.spacing.sm }}>
+              Create account
+            </Button>
+          </VStack>
 
-          <Link href="/(auth)/login" asChild>
-            <Text color="accent" variant="label" style={styles.centerText}>
-              Already have an account? Sign in
-            </Text>
-          </Link>
+          <SafeAreaView edges={['bottom']} style={{ paddingTop: theme.spacing.xxl }}>
+            <Link href="/(auth)/login" asChild>
+              <Text variant="label" color="textSecondary" style={styles.centerText}>
+                Already have an account? <Text variant="label" color="accent">Sign in</Text>
+              </Text>
+            </Link>
+          </SafeAreaView>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Surface>
@@ -96,7 +145,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     paddingHorizontal: 24,
-    gap: 16,
+    gap: 32,
   },
   centerText: {
     textAlign: 'center',

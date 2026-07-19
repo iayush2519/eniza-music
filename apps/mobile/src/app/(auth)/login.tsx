@@ -118,6 +118,12 @@ export default function LoginScreen() {
               </Text>
             ) : null}
 
+            <Link href="/(auth)/forgot-password" asChild>
+              <Text variant="label" color="accent" style={styles.forgotPassword}>
+                Forgot password?
+              </Text>
+            </Link>
+
             <Button
               onPress={handleSubmit}
               disabled={!canSubmit}
@@ -158,5 +164,8 @@ const styles = StyleSheet.create({
   },
   centerText: {
     textAlign: 'center',
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
   },
 });

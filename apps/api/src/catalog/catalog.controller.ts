@@ -1,9 +1,9 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 
 import { AlbumsService } from './albums.service';
 import { ArtistsService } from './artists.service';
 import { toAlbumDto, toArtistDto, toTrackDto } from './catalog.mappers';
-import { AlbumResponseDto, ArtistResponseDto, TrackResponseDto } from './dto';
+import { AlbumResponseDto, ArtistResponseDto, NewReleasesQueryDto, TrackResponseDto } from './dto';
 import { TracksService } from './tracks.service';
 
 /**
@@ -55,11 +55,13 @@ export class CatalogController {
    * "New Releases" for Home. Registered before `albums/:id` so Nest's
    * route matching doesn't treat "new-releases" as an `:id` path param
    * — an explicit static segment always needs to be declared ahead of a
-   * dynamic one that could otherwise shadow it.
+   * dynamic one that could otherwise shadow it. `limit`/`offset` support
+   * infinite-scroll pagination on mobile (see
+   * apps/mobile/src/app/(tabs)/index.tsx's `useInfiniteQuery` usage).
    */
   @Get('albums/new-releases')
-  async getNewReleases(): Promise<AlbumResponseDto[]> {
-    const albums = await this.albumsService.findNewReleases();
+  async getNewReleases(@Query() query: NewReleasesQueryDto): Promise<AlbumResponseDto[]> {
+    const albums = await this.albumsService.findNewReleases(query.limit ?? 20, query.offset ?? 0);
     return albums.map(toAlbumDto);
   }
 

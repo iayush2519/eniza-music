@@ -188,5 +188,39 @@ describe('Catalog (e2e)', () => {
       // own doc comment (catalog.controller.ts) calls out.
       await request(app.getHttpServer()).get('/catalog/albums/new-releases').expect(200);
     });
+
+    it('respects limit and offset for pagination', async () => {
+      for (let i = 0; i < 5; i++) {
+        await testDb.db.insert(albums).values({
+          artistId,
+          title: `Paginated Album ${i}`,
+          releasedAt: new Date(2025, 0, i + 1),
+        });
+      }
+
+      const firstPage = await request(app.getHttpServer())
+        .get('/catalog/albums/new-releases')
+        .query({ limit: 2, offset: 0 })
+        .expect(200);
+      const secondPage = await request(app.getHttpServer())
+        .get('/catalog/albums/new-releases')
+        .query({ limit: 2, offset: 2 })
+        .expect(200);
+
+      expect((firstPage.body as AlbumResponseDto[]).length).toBeLessThanOrEqual(2);
+      expect((secondPage.body as AlbumResponseDto[]).length).toBeLessThanOrEqual(2);
+      const firstIds = new Set((firstPage.body as AlbumResponseDto[]).map((a) => a.id));
+      const secondIds = new Set((secondPage.body as AlbumResponseDto[]).map((a) => a.id));
+      for (const id of secondIds) {
+        expect(firstIds.has(id)).toBe(false);
+      }
+    });
+
+    it('rejects a non-integer limit with 400', async () => {
+      await request(app.getHttpServer())
+        .get('/catalog/albums/new-releases')
+        .query({ limit: 'not-a-number' })
+        .expect(400);
+    });
   });
 });

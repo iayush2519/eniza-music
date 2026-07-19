@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { useReportPlaybackProgress } from '@/hooks/use-report-playback-progress';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { useOnboardingStore } from '@/stores/onboarding-store';
@@ -13,6 +14,12 @@ export default function RootLayout() {
   const bootstrap = useAuthStore((state) => state.bootstrap);
   const isBootstrapped = useAuthStore((state) => state.isBootstrapped);
   const isAuthenticated = useAuthStore((state) => state.user !== null);
+
+  // Mounted once, app-wide — playback (and therefore "Continue
+  // Listening" progress reporting) continues across screens/tabs, not
+  // scoped to any one of them. See the hook's own doc comment for why
+  // this can't live inside Home instead.
+  useReportPlaybackProgress();
 
   const loadOnboarding = useOnboardingStore((state) => state.load);
   const isOnboardingLoaded = useOnboardingStore((state) => state.isLoaded);

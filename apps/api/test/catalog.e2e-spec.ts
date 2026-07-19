@@ -145,4 +145,48 @@ describe('Catalog (e2e)', () => {
       expect(body.some((album) => album.id === albumId)).toBe(true);
     });
   });
+
+  describe('GET /catalog/albums/new-releases', () => {
+    it('requires no authentication and returns albums ordered by release date descending', async () => {
+      const [olderAlbum] = await testDb.db
+        .insert(albums)
+        .values({ artistId, title: 'Older Album', releasedAt: new Date('2020-01-01') })
+        .returning();
+      const [newerAlbum] = await testDb.db
+        .insert(albums)
+        .values({ artistId, title: 'Newer Album', releasedAt: new Date('2026-01-01') })
+        .returning();
+
+      const response = await request(app.getHttpServer())
+        .get('/catalog/albums/new-releases')
+        .expect(200);
+      const body = response.body as AlbumResponseDto[];
+
+      const newerIndex = body.findIndex((album) => album.id === newerAlbum.id);
+      const olderIndex = body.findIndex((album) => album.id === olderAlbum.id);
+      expect(newerIndex).toBeGreaterThanOrEqual(0);
+      expect(olderIndex).toBeGreaterThanOrEqual(0);
+      expect(newerIndex).toBeLessThan(olderIndex);
+    });
+
+    it('excludes albums with no release date', async () => {
+      const [undatedAlbum] = await testDb.db
+        .insert(albums)
+        .values({ artistId, title: 'Undated Album', releasedAt: null })
+        .returning();
+
+      const response = await request(app.getHttpServer())
+        .get('/catalog/albums/new-releases')
+        .expect(200);
+      const body = response.body as AlbumResponseDto[];
+
+      expect(body.some((album) => album.id === undatedAlbum.id)).toBe(false);
+    });
+
+    it('is matched ahead of the :id route and never treated as an album id lookup', async () => {
+      // Regression guard for the exact routing hazard this endpoint's
+      // own doc comment (catalog.controller.ts) calls out.
+      await request(app.getHttpServer()).get('/catalog/albums/new-releases').expect(200);
+    });
+  });
 });

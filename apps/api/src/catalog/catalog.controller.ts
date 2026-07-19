@@ -51,6 +51,18 @@ export class CatalogController {
     return toTrackDto(track);
   }
 
+  /**
+   * "New Releases" for Home. Registered before `albums/:id` so Nest's
+   * route matching doesn't treat "new-releases" as an `:id` path param
+   * — an explicit static segment always needs to be declared ahead of a
+   * dynamic one that could otherwise shadow it.
+   */
+  @Get('albums/new-releases')
+  async getNewReleases(): Promise<AlbumResponseDto[]> {
+    const albums = await this.albumsService.findNewReleases();
+    return albums.map(toAlbumDto);
+  }
+
   @Get('albums/:id')
   async getAlbum(@Param('id') id: string): Promise<AlbumResponseDto> {
     const album = await this.albumsService.findById(id);

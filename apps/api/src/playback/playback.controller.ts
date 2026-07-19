@@ -1,6 +1,15 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
-import { ResolvedStreamResponseDto } from './dto';
+import { ReportProgressDto, ResolvedStreamResponseDto } from './dto';
 import { PlaybackService } from './playback.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,5 +39,18 @@ export class PlaybackController {
     @Param('trackId') trackId: string,
   ): Promise<ResolvedStreamResponseDto> {
     return this.playbackService.resolveStreamUrl(user.id, trackId);
+  }
+
+  /**
+   * Reports how far into a track the mobile player has gotten — the
+   * write side of "Continue Listening" (see
+   * recommendations.service.ts's `getContinueListening`, which reads
+   * exactly the rows this endpoint updates). Idempotent: repeated calls
+   * with the same `positionSeconds` simply overwrite the same value.
+   */
+  @Post('progress')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async reportProgress(@CurrentUser() user: User, @Body() dto: ReportProgressDto): Promise<void> {
+    await this.playbackService.reportProgress(user.id, dto);
   }
 }

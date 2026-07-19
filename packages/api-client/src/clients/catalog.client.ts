@@ -23,6 +23,14 @@ export class CatalogClient {
     return this.http.request(`/catalog/albums/${id}/tracks`, { skipAuth: true });
   }
 
+  /** Backs Home's "New Releases" section. Registered as a static route
+   * ahead of `/catalog/albums/:id` on the backend (see
+   * apps/api/src/catalog/catalog.controller.ts), so this path never
+   * collides with `getAlbum`. */
+  getNewReleaseAlbums(): Promise<Album[]> {
+    return this.http.request('/catalog/albums/new-releases', { skipAuth: true });
+  }
+
   listArtists(): Promise<Artist[]> {
     return this.http.request('/catalog/artists', { skipAuth: true });
   }

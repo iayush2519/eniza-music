@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, lt, sql } from 'drizzle-orm';
 
 import { MusicGateway } from '../discovery/music-gateway.service';
 import { DATABASE_CONNECTION } from '../database/database.constants';
@@ -15,6 +15,18 @@ export interface RecommendationSectionResult {
 const RECENTLY_PLAYED_LIMIT = 10;
 const FOR_YOU_LIMIT = 10;
 const BECAUSE_YOU_LIKED_LIMIT = 10;
+const CONTINUE_LISTENING_LIMIT = 10;
+const TRENDING_LIMIT = 10;
+/** A track only counts as "in progress" if it's been listened to for at
+ * least this long — a few seconds of `durationListenedSeconds` (e.g. a
+ * near-instant skip that happened to report progress once before the
+ * skip) shouldn't surface as something worth resuming. */
+const CONTINUE_LISTENING_MIN_SECONDS = 15;
+/** How far back "Trending Now" looks — a global, cross-user aggregate
+ * over recent plays, not all-time, so the section reflects current
+ * activity rather than being dominated by whatever was played most in
+ * the app's early (near-empty) history. */
+const TRENDING_WINDOW_DAYS = 30;
 
 /**
  * Backs `GET /recommendations`, the personalized landing page for Home —
@@ -51,6 +63,16 @@ export class RecommendationsService {
   async getSections(userId: string): Promise<RecommendationSectionResult[]> {
     const sections: RecommendationSectionResult[] = [];
 
+    // Ordered most-actionable-and-personal first, least-personal last:
+    // resuming something you already started, then what you've played,
+    // then a personalized pick, then an enrichment-based pick, then a
+    // global (not user-specific) signal any user — including a brand
+    // new one with no history — can see something in.
+    const continueListening = await this.getContinueListening(userId);
+    if (continueListening) {
+      sections.push(continueListening);
+    }
+
     const recentlyPlayed = await this.getRecentlyPlayed(userId);
     if (recentlyPlayed.length > 0) {
       sections.push({ id: 'recently-played', title: 'Recently played', tracks: recentlyPlayed });
@@ -66,7 +88,95 @@ export class RecommendationsService {
       sections.push(becauseYouLiked);
     }
 
+    const trending = await this.getTrending();
+    if (trending) {
+      sections.push(trending);
+    }
+
     return sections;
+  }
+
+  /**
+   * "Continue Listening": tracks this user started but neither finished
+   * nor skipped, most-recently-played first. Reads exactly the columns
+   * `POST /playback/progress` writes (see playback.service.ts's
+   * `reportProgress`) — `recordPlay` (called on every stream resolution)
+   * never sets `durationListenedSeconds` itself, so a row only becomes
+   * eligible for this section once the mobile player has actually
+   * reported progress against it. Until a client calls that endpoint for
+   * a given play, this section is simply omitted for it — the same
+   * graceful "not enough data yet" degradation every section in this
+   * service already follows, not a special case.
+   */
+  private async getContinueListening(userId: string): Promise<RecommendationSectionResult | null> {
+    const rows = await this.db
+      .select({ track: tracks, playedAt: listeningHistory.playedAt })
+      .from(listeningHistory)
+      .innerJoin(tracks, eq(listeningHistory.trackId, tracks.id))
+      .where(
+        and(
+          eq(listeningHistory.userId, userId),
+          eq(listeningHistory.completed, false),
+          eq(listeningHistory.skipped, false),
+          isNotNull(listeningHistory.durationListenedSeconds),
+          gte(listeningHistory.durationListenedSeconds, CONTINUE_LISTENING_MIN_SECONDS),
+          lt(listeningHistory.durationListenedSeconds, tracks.durationSeconds),
+        ),
+      )
+      .orderBy(desc(listeningHistory.playedAt));
+
+    const seen = new Set<string>();
+    const distinct: Track[] = [];
+    for (const row of rows) {
+      if (seen.has(row.track.id)) {
+        continue;
+      }
+      seen.add(row.track.id);
+      distinct.push(row.track);
+      if (distinct.length >= CONTINUE_LISTENING_LIMIT) {
+        break;
+      }
+    }
+
+    return distinct.length > 0
+      ? { id: 'continue-listening', title: 'Continue listening', tracks: distinct }
+      : null;
+  }
+
+  /**
+   * "Trending Now": the most-played tracks across *all* users in the
+   * last `TRENDING_WINDOW_DAYS` days — the one section here that is not
+   * personalized (per docs/decisions/0007-provider-backed-music-catalog.md,
+   * this app's recommendations are otherwise entirely user-behavior
+   * driven, but "what's popular right now" is inherently a cross-user
+   * signal, not a substitute for the personalized sections above it).
+   * Shown to every user, including one with zero history of their own,
+   * so Home never has literally nothing to show a brand-new account.
+   */
+  private async getTrending(): Promise<RecommendationSectionResult | null> {
+    const windowStart = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+    const playCounts = await this.db
+      .select({
+        trackId: listeningHistory.trackId,
+        playCount: sql<number>`count(*)`.as('play_count'),
+      })
+      .from(listeningHistory)
+      .where(gte(listeningHistory.playedAt, windowStart))
+      .groupBy(listeningHistory.trackId)
+      .orderBy(desc(sql`play_count`))
+      .limit(TRENDING_LIMIT);
+
+    if (playCounts.length === 0) {
+      return null;
+    }
+
+    const trendingTracks = await Promise.all(
+      playCounts.map(({ trackId }) => this.musicGateway.getTrack(trackId)),
+    );
+    const resolved = trendingTracks.filter((track): track is Track => track !== undefined);
+
+    return resolved.length > 0 ? { id: 'trending', title: 'Trending now', tracks: resolved } : null;
   }
 
   private async getRecentlyPlayed(userId: string): Promise<Track[]> {

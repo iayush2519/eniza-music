@@ -1,4 +1,4 @@
-import { ResolvedStream } from '@music-app/shared-types';
+import { ReportProgressRequest, ResolvedStream } from '@music-app/shared-types';
 
 import { HttpClient } from '../http-client';
 
@@ -20,5 +20,15 @@ export class PlaybackClient {
 
   resolveStreamUrl(trackId: string): Promise<ResolvedStream> {
     return this.http.request(`/playback/resolve/${trackId}`);
+  }
+
+  /** Reports playback position for the currently (or just-)played
+   * track — the write side of Home's "Continue Listening" section (see
+   * apps/api/src/recommendations/recommendations.service.ts's
+   * `getContinueListening`). Fire-and-forget from the caller's
+   * perspective is a UI-layer decision, not this client's — it simply
+   * returns the request promise. */
+  reportProgress(request: ReportProgressRequest): Promise<void> {
+    return this.http.request('/playback/progress', { method: 'POST', body: request });
   }
 }

@@ -133,4 +133,74 @@ describe('Playback (e2e)', () => {
       });
     });
   });
+
+  describe('POST /playback/progress', () => {
+    it('rejects an unauthenticated request with 401', async () => {
+      await request(app.getHttpServer())
+        .post('/playback/progress')
+        .send({ trackId: '00000000-0000-0000-0000-000000000000', positionSeconds: 10 })
+        .expect(401);
+    });
+
+    it("updates the most recent listening_history row's progress", async () => {
+      const track = await musicGateway.fetchAndCacheTrack('track-3');
+      await request(app.getHttpServer())
+        .get(`/playback/resolve/${track!.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      await request(app.getHttpServer())
+        .post('/playback/progress')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ trackId: track!.id, positionSeconds: 42 })
+        .expect(204);
+
+      const rows = await testDb.db
+        .select()
+        .from(listeningHistory)
+        .where(and(eq(listeningHistory.userId, userId), eq(listeningHistory.trackId, track!.id)));
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0].durationListenedSeconds).toBe(42);
+    });
+
+    it('marks the row completed when completed: true is reported', async () => {
+      const track = await musicGateway.fetchAndCacheTrack('track-4');
+      await request(app.getHttpServer())
+        .get(`/playback/resolve/${track!.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      await request(app.getHttpServer())
+        .post('/playback/progress')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ trackId: track!.id, positionSeconds: 244, completed: true })
+        .expect(204);
+
+      const rows = await testDb.db
+        .select()
+        .from(listeningHistory)
+        .where(and(eq(listeningHistory.userId, userId), eq(listeningHistory.trackId, track!.id)));
+
+      expect(rows[0].completed).toBe(true);
+    });
+
+    it('rejects an invalid payload (missing trackId) with 400', async () => {
+      await request(app.getHttpServer())
+        .post('/playback/progress')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ positionSeconds: 10 })
+        .expect(400);
+    });
+
+    it('is a silent no-op when there is no listening_history row for the track', async () => {
+      await request(app.getHttpServer())
+        .post('/playback/progress')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ trackId: '00000000-0000-0000-0000-000000000000', positionSeconds: 10 })
+        .expect(204);
+    });
+  });
 });

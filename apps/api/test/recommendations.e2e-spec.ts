@@ -151,5 +151,93 @@ describe('Recommendations (e2e)', () => {
       expect(becauseYouLiked?.title).toContain(track!.title);
       expect(becauseYouLiked?.tracks.length).toBeGreaterThan(0);
     });
+
+    it('includes a "Continue listening" section for a track played past the minimum threshold but not finished', async () => {
+      const track = await musicGateway.fetchAndCacheTrack('track-3');
+      await testDb.db.insert(listeningHistory).values({
+        userId,
+        trackId: track!.id,
+        durationListenedSeconds: 30,
+        completed: false,
+        skipped: false,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/recommendations')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const sections = response.body as RecommendationSectionResponseDto[];
+
+      const continueListening = sections.find((section) => section.id === 'continue-listening');
+      expect(continueListening).toBeDefined();
+      expect(continueListening?.tracks.some((t) => t.id === track!.id)).toBe(true);
+    });
+
+    it('omits "Continue listening" for a track that was completed', async () => {
+      const track = await musicGateway.fetchAndCacheTrack('track-4');
+      await testDb.db.insert(listeningHistory).values({
+        userId,
+        trackId: track!.id,
+        durationListenedSeconds: 250,
+        completed: true,
+        skipped: false,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/recommendations')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const sections = response.body as RecommendationSectionResponseDto[];
+
+      const continueListening = sections.find((section) => section.id === 'continue-listening');
+      expect(continueListening?.tracks.some((t) => t.id === track!.id)).toBeFalsy();
+    });
+
+    it('omits "Continue listening" for a track only listened to for a few seconds', async () => {
+      const track = await musicGateway.fetchAndCacheTrack('track-5');
+      await testDb.db.insert(listeningHistory).values({
+        userId,
+        trackId: track!.id,
+        durationListenedSeconds: 3,
+        completed: false,
+        skipped: false,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/recommendations')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const sections = response.body as RecommendationSectionResponseDto[];
+
+      const continueListening = sections.find((section) => section.id === 'continue-listening');
+      expect(continueListening?.tracks.some((t) => t.id === track!.id)).toBeFalsy();
+    });
+
+    it('includes a "Trending now" section reflecting plays across all users', async () => {
+      const track = await musicGateway.fetchAndCacheTrack('track-1');
+      // A second, unrelated user's play counts toward global trending —
+      // this is deliberately not scoped to `userId`.
+      const otherUserResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: `trending-other-${Date.now()}@example.com`,
+          password: 'Str0ngPass1',
+          displayName: 'Other User',
+        })
+        .expect(201);
+      const otherUserId = asAuthResponse(otherUserResponse.body).user.id;
+      await testDb.db.insert(listeningHistory).values({ userId: otherUserId, trackId: track!.id });
+
+      const response = await request(app.getHttpServer())
+        .get('/recommendations')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const sections = response.body as RecommendationSectionResponseDto[];
+
+      const trending = sections.find((section) => section.id === 'trending');
+      expect(trending).toBeDefined();
+      expect(trending?.title).toBe('Trending now');
+      expect(trending?.tracks.some((t) => t.id === track!.id)).toBe(true);
+    });
   });
 });

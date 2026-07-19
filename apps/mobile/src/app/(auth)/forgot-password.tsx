@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
     if (!canSubmit) return;
     try {
       await forgotPassword({ email });
-      router.push({ pathname: '/(auth)/verify-otp', params: { email, purpose: 'password_reset' } });
+      router.push({ pathname: '/verify-otp', params: { email, purpose: 'password_reset' } });
     } catch {
       // Error message already in the store, rendered below.
     }

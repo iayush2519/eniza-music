@@ -43,7 +43,7 @@ export default function ResetPasswordScreen() {
     if (!canSubmit) return;
     try {
       await resetPassword(newPassword);
-      router.replace({ pathname: '/(auth)/auth-result', params: { outcome: 'password-reset' } });
+      router.replace({ pathname: '/auth-result', params: { outcome: 'password-reset' } });
     } catch {
       // Error already in the store, rendered below. On an expired-token
       // error, resetPasswordFlow() below sends the user back to restart

@@ -85,34 +85,67 @@ export default function RootLayout() {
 
               {/*
                 Deliberately gated on `isAuthenticated` alone, not also
-                `!isEmailVerified` — an earlier version of this guard also
-                required `isAuthenticated && !isEmailVerified` to keep
-                (auth) reachable through the verify-otp/auth-result
-                screens post-registration. That created a real race: the
-                instant `verifyOtp` succeeds, `isEmailVerified` flips
-                true, which would make *this* guard false and (tabs)'s
-                guard true before the "Account Verified" screen could
-                even render — Stack.Protected forcibly redirects away
-                from any screen in a group whose guard just went false,
-                which would skip the confirmation screen the approved UI
-                board shows entirely.
-
-                Verification enforcement instead lives in (tabs)'s own
-                layout (see (tabs)/_layout.tsx) as an explicit redirect
-                effect, plus the two places that ever transition
-                `isAuthenticated` from false to true — register.tsx and
-                login.tsx — both explicitly push to verify-otp when the
-                resulting profile isn't yet verified. Together these
-                cover the same "an authenticated-but-unverified user
-                cannot reach the main app" requirement without a
-                structural guard racing against in-flow navigation.
+                `!isEmailVerified` — see the real bug this previously
+                caused, fixed by moving verify-otp/auth-result out of
+                this group entirely rather than trying to patch the
+                guard (see those screens' own top-level `<Stack.Screen>`
+                entries below for the full explanation): keeping them
+                inside `(auth)` meant *any* condition that widens this
+                guard to stay true past the moment `isAuthenticated`
+                flips true would race the "Account Verified" screen the
+                same way the original bug did, just moved to a
+                different transition. Two screens that must be reachable
+                in *both* the pre-auth and authenticated-but-unverified
+                states can't cleanly belong to a group whose only job is
+                gating pre-auth screens — they belong at the root
+                instead, same as `player`/`lyrics` below.
               */}
               <Stack.Protected guard={isReady && !isAuthenticated && hasSeenOnboarding}>
                 <Stack.Screen name="(auth)" />
               </Stack.Protected>
 
+              {/*
+                verify-otp/auth-result are reachable from two disjoint
+                auth states — pre-auth (fresh register/forgot-password)
+                and authenticated-but-unverified (a stored session whose
+                account never finished verification, or the instant
+                register/login's own tokens land but before the "Account
+                Verified" screen has been shown) — so, like
+                player/lyrics/detail below, they're top-level routes
+                gated only on `isReady`, not nested in a group gated on
+                `isAuthenticated` either way. This is what actually fixes
+                the bug where `(tabs)/_layout.tsx`'s redirect effect (an
+                authenticated-but-unverified user gets bounced here) used
+                to target a route inside a group that had already been
+                unmounted by the same auth-state change that triggered
+                the redirect, producing a permanent blank screen with no
+                error.
+              */}
+              <Stack.Protected guard={isReady}>
+                <Stack.Screen name="verify-otp" />
+                <Stack.Screen name="auth-result" />
+              </Stack.Protected>
+
               <Stack.Protected guard={isReady && isAuthenticated}>
                 <Stack.Screen name="(tabs)" />
+                {/*
+                  Player/Lyrics/detail screens are registered as
+                  top-level routes (siblings of `(tabs)`, not nested
+                  inside it) — per
+                  docs/design/design-system-specification.md's
+                  Navigation Flow ("Mini Player -> (Expand animation) ->
+                  Full Player"), the Full Player must be reachable from
+                  the Mini Player regardless of which tab is currently
+                  active, and a modal presentation reads correctly
+                  ("pushed over" whatever tab screen was showing) only
+                  when it isn't nested inside one specific tab's own
+                  stack.
+                */}
+                <Stack.Screen name="player" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="lyrics" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="album/[id]" />
+                <Stack.Screen name="artist/[id]" />
+                <Stack.Screen name="playlist/[id]" />
               </Stack.Protected>
             </Stack>
           </NavigationThemeProvider>

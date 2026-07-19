@@ -7,8 +7,20 @@ export default function AppTabs() {
   return (
     <NativeTabs
       backgroundColor={theme.colors.background}
-      indicatorColor={theme.colors.surface}
-      labelStyle={{ selected: { color: theme.colors.text } }}>
+      // TabNavigator per docs/design/design-system-specification.md §1
+      // ("Active (Accent), Inactive") — the active tab's icon/label must
+      // read in the brand accent, not the same neutral gray as inactive
+      // tabs. `iconColor`/`labelStyle` both take a `{ default, selected }`
+      // pair for exactly this; the Android active-tab pill (`indicatorColor`)
+      // is tinted with `accentMuted` (accent_rose, "secondary accent...
+      // badges" per spec §0) so the accent-colored icon/label sitting on
+      // top of it stays legible rather than accent-on-accent.
+      iconColor={{ default: theme.colors.textSecondary, selected: theme.colors.accent }}
+      indicatorColor={theme.colors.accentMuted}
+      labelStyle={{
+        default: { color: theme.colors.textSecondary },
+        selected: { color: theme.colors.accent },
+      }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon

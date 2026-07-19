@@ -48,7 +48,7 @@ export default function RegisterScreen() {
     if (!canSubmit) return;
     try {
       await register({ email, password, displayName });
-      router.push({ pathname: '/(auth)/verify-otp', params: { email, purpose: 'register' } });
+      router.push({ pathname: '/verify-otp', params: { email, purpose: 'register' } });
     } catch {
       // Error message already in the store, rendered below.
     }

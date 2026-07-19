@@ -1,6 +1,7 @@
 import { EmptyState, ErrorState, Surface, Text, VStack } from '@music-app/design-system';
 import type { Track } from '@music-app/shared-types';
 import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -85,7 +86,7 @@ export default function ExploreScreen() {
           )}
           ItemSeparatorComponent={() => <VStack gap="sm" />}
         />
-        <MiniPlayer />
+        <MiniPlayer onExpand={() => router.push('/player')} />
       </SafeAreaView>
     </Surface>
   );

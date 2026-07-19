@@ -1,8 +1,8 @@
 import { Button, Surface, Text } from '@music-app/design-system';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
-import { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OnboardingSlide } from '@/components/onboarding-slide';
@@ -23,7 +23,7 @@ export default function OnboardingScreen() {
   const complete = useOnboardingStore((state) => state.complete);
   const [pageIndex, setPageIndex] = useState(0);
   const scrollProgress = useSharedValue(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<Animated.ScrollView>(null);
 
   const isLastSlide = pageIndex === onboardingSlides.length - 1;
 
@@ -65,7 +65,7 @@ export default function OnboardingScreen() {
           </Text>
         </Pressable>
 
-        <ScrollView
+        <Animated.ScrollView
           ref={scrollRef}
           horizontal
           pagingEnabled
@@ -82,7 +82,7 @@ export default function OnboardingScreen() {
               description={slide.description}
             />
           ))}
-        </ScrollView>
+        </Animated.ScrollView>
 
         <SafeAreaView edges={['bottom']} style={styles.footer}>
           <ProgressDots count={onboardingSlides.length} progress={scrollProgress} />

@@ -98,7 +98,7 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
     return this.native.setPlaybackRate(rate);
   }
 
-  reorderQueue(fromIndex: number, toIndex: number): Promise<void> {
+  async reorderQueue(fromIndex: number, toIndex: number): Promise<void> {
     // Mirrors the queue array locally too — the same way `load`/
     // `setQueue` keep `this.queue` in sync with what the native side
     // holds, since native state snapshots never carry back title/artist/
@@ -115,9 +115,19 @@ export class AndroidPlaybackEngine implements PlaybackEngine {
       if (moved) {
         next.splice(toIndex, 0, moved);
         this.queue = next;
+        // Without this, subscribers only see the reordered queue once
+        // some *other* native event happens to fire next (e.g. the next
+        // position-sync tick while playing) — while paused, nothing
+        // would trigger a refresh at all, silently desyncing the UI
+        // from the just-reordered queue. `AudioEngineModule.kt` also
+        // listens for `onTimelineChanged` for the same reason on the
+        // native side (belt-and-suspenders: this covers the JS-side
+        // queue array, that covers `currentIndex` if the native
+        // implementation of `moveMediaItem` ever shifts it).
+        this.notifyListeners();
       }
     }
-    return this.native.reorderQueue(fromIndex, toIndex);
+    await this.native.reorderQueue(fromIndex, toIndex);
   }
 
   getState(): PlaybackState {

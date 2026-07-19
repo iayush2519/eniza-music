@@ -328,6 +328,32 @@ describe('AndroidPlaybackEngine', () => {
       expect(engine.getState().queue).toEqual([queue[1], queue[0]]);
     });
 
+    it('notifies subscribers immediately after a successful reorder, without waiting for a native event', async () => {
+      const engine = new AndroidPlaybackEngine();
+      const queue = createQueue();
+      await engine.load(queue, 0);
+
+      const listener = jest.fn();
+      engine.subscribe(listener);
+
+      await engine.reorderQueue(0, 1);
+
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({ queue: [queue[1], queue[0]] }));
+    });
+
+    it('does not notify subscribers for a no-op reorder (out-of-range or identical indices)', async () => {
+      const engine = new AndroidPlaybackEngine();
+      await engine.load(createQueue(), 0);
+
+      const listener = jest.fn();
+      engine.subscribe(listener);
+
+      await engine.reorderQueue(0, 0);
+      await engine.reorderQueue(0, 99);
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
     it('ignores an out-of-range index without throwing or calling the native module incorrectly', async () => {
       const engine = new AndroidPlaybackEngine();
       await engine.load(createQueue(), 0);

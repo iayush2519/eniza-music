@@ -78,6 +78,17 @@ class AudioEngineModule : Module() {
       refreshState()
     }
 
+    /**
+     * Fires on `moveMediaItem` (queue reorder), `shuffleModeEnabled`
+     * changes, and any other playlist-shape change — without this, a
+     * reorder wouldn't emit a fresh `positionMs`/`currentIndex` if
+     * either shifted as a result, since none of the other listener
+     * callbacks above cover a same-item playlist-order change.
+     */
+    override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+      refreshState()
+    }
+
     override fun onPlayerError(error: PlaybackException) {
       stopPositionSync()
       currentState = buildState(status = "error", error = error.message)

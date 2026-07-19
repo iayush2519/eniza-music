@@ -1,6 +1,7 @@
 import { Button, EmptyState, ErrorState, HStack, SegmentedControl, Skeleton, Surface, Text, VStack } from '@music-app/design-system';
 import type { Album, Artist, Playlist } from '@music-app/shared-types';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -80,7 +81,9 @@ export default function LibraryScreen() {
                 emptyDescription="Playlists you create will show up here."
               />
             }
-            renderItem={({ item }) => <PlaylistCard playlist={item} />}
+            renderItem={({ item }) => (
+              <PlaylistCard playlist={item} onPress={() => router.push(`/playlist/${item.id}`)} />
+            )}
             ItemSeparatorComponent={() => <VStack gap="sm" />}
           />
         ) : segment === 'Albums' ? (
@@ -99,7 +102,9 @@ export default function LibraryScreen() {
                 emptyDescription="Albums you save will show up here."
               />
             }
-            renderItem={({ item }) => <AlbumCard album={item} style={styles.gridCard} />}
+            renderItem={({ item }) => (
+              <AlbumCard album={item} style={styles.gridCard} onPress={() => router.push(`/album/${item.id}`)} />
+            )}
             ItemSeparatorComponent={() => <VStack gap="sm" />}
           />
         ) : (
@@ -118,11 +123,13 @@ export default function LibraryScreen() {
                 emptyDescription="Artists you follow will show up here."
               />
             }
-            renderItem={({ item }) => <ArtistCard artist={item} />}
+            renderItem={({ item }) => (
+              <ArtistCard artist={item} onPress={() => router.push(`/artist/${item.id}`)} />
+            )}
             ItemSeparatorComponent={() => <VStack gap="sm" />}
           />
         )}
-        <MiniPlayer />
+        <MiniPlayer onExpand={() => router.push('/player')} />
       </SafeAreaView>
     </Surface>
   );

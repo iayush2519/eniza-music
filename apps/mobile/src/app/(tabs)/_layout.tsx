@@ -22,7 +22,7 @@ export default function TabsLayout() {
 
   useEffect(() => {
     if (!isEmailVerified && email) {
-      router.replace({ pathname: '/(auth)/verify-otp', params: { email, purpose: 'register' } });
+      router.replace({ pathname: '/verify-otp', params: { email, purpose: 'register' } });
     }
   }, [isEmailVerified, email]);
 

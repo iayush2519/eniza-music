@@ -158,7 +158,7 @@ export default function HomeScreen() {
           )}
           ItemSeparatorComponent={() => <VStack gap="lg" />}
         />
-        <MiniPlayer />
+        <MiniPlayer onExpand={() => router.push('/player')} />
       </SafeAreaView>
     </Surface>
   );

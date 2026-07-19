@@ -1,5 +1,6 @@
 import { Skeleton, Text, VStack } from '@music-app/design-system';
 import type { Album } from '@music-app/shared-types';
+import { router } from 'expo-router';
 import { FlatList, StyleSheet } from 'react-native';
 
 import { AlbumCard } from '@/components/album-card';
@@ -55,7 +56,9 @@ export function NewReleasesSection() {
         data={albums}
         keyExtractor={(album) => album.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <AlbumCard album={item} style={styles.card} />}
+        renderItem={({ item }) => (
+          <AlbumCard album={item} style={styles.card} onPress={() => router.push(`/album/${item.id}`)} />
+        )}
         ItemSeparatorComponent={() => <VStack gap="sm" style={styles.horizontalGap} />}
         onEndReachedThreshold={0.5}
         onEndReached={() => {

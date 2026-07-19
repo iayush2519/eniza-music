@@ -10,6 +10,7 @@ export * from './icon';
 export * from './icon-button';
 export * from './pressable-scale';
 export * from './progress-bar';
+export * from './reorderable-list';
 export * from './segmented-control';
 export * from './skeleton';
 export * from './slider';

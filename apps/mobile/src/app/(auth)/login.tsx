@@ -78,7 +78,7 @@ export default function LoginScreen() {
       // actually gets them to verify-otp rather than just staying on a
       // (functionally stuck) Login screen.
       if (!useAuthStore.getState().user?.emailVerified) {
-        router.push({ pathname: '/(auth)/verify-otp', params: { email, purpose: 'register' } });
+        router.push({ pathname: '/verify-otp', params: { email, purpose: 'register' } });
       }
     } catch {
       // Errors surface via the store's `error` field, rendered below.

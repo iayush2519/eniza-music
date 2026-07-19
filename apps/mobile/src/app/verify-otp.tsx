@@ -52,7 +52,7 @@ export default function VerifyOtpScreen() {
         router.push('/(auth)/reset-password');
       } else {
         await verifyOtp({ email, code });
-        router.push({ pathname: '/(auth)/auth-result', params: { outcome: 'verified' } });
+        router.push({ pathname: '/auth-result', params: { outcome: 'verified' } });
       }
     } catch {
       // Error message is already in the store and rendered below;

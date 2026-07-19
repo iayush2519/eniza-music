@@ -12,6 +12,7 @@ export class UserProfileDto implements UserProfile {
   email!: string;
   displayName!: string;
   isArtist!: boolean;
+  emailVerified!: boolean;
 }
 
 export class AuthResponseDto implements AuthResponse {

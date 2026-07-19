@@ -8,4 +8,7 @@ export type UserProfile = {
   email: string;
   displayName: string;
   isArtist: boolean;
+  /** True once the account has completed email OTP verification (see
+   * apps/api/src/database/schema/users.schema.ts). */
+  emailVerified: boolean;
 };

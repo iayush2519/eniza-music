@@ -1,4 +1,14 @@
-import { AuthResponse, LoginRequest, RegisterRequest, UserProfile } from '@music-app/shared-types';
+import {
+  AuthResponse,
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  ResendOtpRequest,
+  ResetPasswordRequest,
+  UserProfile,
+  VerifyOtpRequest,
+  VerifyPasswordResetOtpResponse,
+} from '@music-app/shared-types';
 
 import { HttpClient } from '../http-client';
 import { AuthTokenStore } from '../token-store';
@@ -59,6 +69,42 @@ export class AuthClient {
     } finally {
       await this.tokenStore.clearTokens();
     }
+  }
+
+  /** Verifies the OTP sent at registration, flipping the account's
+   * `emailVerified` flag. Runs before a session exists in the sense that
+   * it doesn't need one — the request is keyed by email, not a bearer
+   * token — so, like register/login, it's sent with `skipAuth: true`. */
+  verifyOtp(request: VerifyOtpRequest): Promise<UserProfile> {
+    return this.http.request('/auth/verify-otp', { method: 'POST', body: request, skipAuth: true });
+  }
+
+  resendOtp(request: ResendOtpRequest): Promise<void> {
+    return this.http.request('/auth/resend-otp', { method: 'POST', body: request, skipAuth: true });
+  }
+
+  forgotPassword(request: ForgotPasswordRequest): Promise<void> {
+    return this.http.request('/auth/forgot-password', {
+      method: 'POST',
+      body: request,
+      skipAuth: true,
+    });
+  }
+
+  verifyForgotPasswordOtp(request: VerifyOtpRequest): Promise<VerifyPasswordResetOtpResponse> {
+    return this.http.request('/auth/forgot-password/verify', {
+      method: 'POST',
+      body: request,
+      skipAuth: true,
+    });
+  }
+
+  resetPassword(request: ResetPasswordRequest): Promise<void> {
+    return this.http.request('/auth/reset-password', {
+      method: 'POST',
+      body: request,
+      skipAuth: true,
+    });
   }
 
   private async persistTokens(result: AuthResponse): Promise<void> {

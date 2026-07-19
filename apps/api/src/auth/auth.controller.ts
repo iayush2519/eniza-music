@@ -3,10 +3,14 @@ import type { Request } from 'express';
 
 import { AuthService, RequestContext } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { AuthResponseDto, UserProfileDto } from './dto/auth-response.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import type { User } from '../database/schema';
 
@@ -51,5 +55,33 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Body() dto: RefreshDto): Promise<void> {
     await this.authService.logout(dto.refreshToken);
+  }
+
+  @Post('verify-otp')
+  verifyOtp(@Body() dto: VerifyOtpDto): Promise<UserProfileDto> {
+    return this.authService.verifyRegistrationOtp(dto.email, dto.code);
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resendOtp(@Body() dto: ResendOtpDto): Promise<void> {
+    await this.authService.resendRegistrationOtp(dto.email);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+    await this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Post('forgot-password/verify')
+  verifyForgotPasswordOtp(@Body() dto: VerifyOtpDto): Promise<{ resetToken: string }> {
+    return this.authService.verifyPasswordResetOtp(dto.email, dto.code);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    await this.authService.resetPassword(dto);
   }
 }

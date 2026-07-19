@@ -25,3 +25,30 @@ export type RefreshTokenPayload = {
   sessionId: string;
   jti: string;
 };
+
+/**
+ * Short-lived token returned by `POST /auth/forgot-password/verify` after
+ * a correct OTP, presented to `POST /auth/reset-password` to authorize
+ * setting a new password without requiring the (about-to-be-forgotten)
+ * old one. Signed with `JWT_ACCESS_SECRET` and a short, fixed 10-minute
+ * expiry — deliberately not a new secret/config value, since this token
+ * carries no more authority than a normal access token would (it does
+ * not bypass password hashing or session logic) and reusing the existing
+ * secret avoids growing the env-var surface for a narrow, single-purpose
+ * token.
+ *
+ * `purpose` guards against a normal access token being presented here by
+ * mistake (or a reset token being presented where an access token is
+ * expected) — both are HS256 JWTs signed with the same secret, so without
+ * a distinguishing claim they'd otherwise verify as interchangeable.
+ *
+ * `jti` is required per the standing rule in this file's own history (see
+ * the `RefreshTokenPayload` doc comment above and ADR 0005): any new
+ * token type must carry a per-issuance-unique claim, or two tokens issued
+ * within the same second collide.
+ */
+export type PasswordResetTokenPayload = {
+  sub: string;
+  purpose: 'password_reset';
+  jti: string;
+};

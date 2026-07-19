@@ -30,4 +30,28 @@ export class UsersService {
     const [user] = await this.db.insert(users).values(newUser).returning();
     return user;
   }
+
+  /** Marks an account's email as verified after a successful
+   * registration OTP check (see AuthService.verifyRegistrationOtp). */
+  async markEmailVerified(id: string): Promise<User> {
+    const [user] = await this.db
+      .update(users)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  /** Replaces a user's password hash — used by the password-reset flow
+   * (see AuthService.resetPassword). Takes an already-hashed value
+   * (never a plaintext password) so this service never needs to know
+   * about `PasswordService`. */
+  async updatePassword(id: string, passwordHash: string): Promise<User> {
+    const [user] = await this.db
+      .update(users)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
 }

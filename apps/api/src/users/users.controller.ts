@@ -22,6 +22,7 @@ export class UsersController {
       email: user.email,
       displayName: user.displayName,
       isArtist: user.isArtist,
+      emailVerified: user.emailVerified,
     };
   }
 }

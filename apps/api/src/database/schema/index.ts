@@ -1,5 +1,6 @@
 export * from './albums.schema';
 export * from './artists.schema';
+export * from './email-otps.schema';
 export * from './library-entries.schema';
 export * from './listening-history.schema';
 export * from './playlist-tracks.schema';

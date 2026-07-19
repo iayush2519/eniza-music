@@ -76,6 +76,21 @@ export class SessionsService {
     await this.db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, sessionId));
   }
 
+  /**
+   * Revokes every active session for a user — used after a password
+   * reset (see PasswordResetService), on the standard reasoning that a
+   * password change should force re-authentication on every device, not
+   * just the one that performed the reset. Already-revoked sessions are
+   * left untouched (the `isNull(revokedAt)` filter) rather than
+   * re-written, since they carry no meaningful state to update.
+   */
+  async revokeAllForUser(userId: string): Promise<void> {
+    await this.db
+      .update(sessions)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+  }
+
   async verifyRefreshToken(session: Session, presentedToken: string): Promise<boolean> {
     return this.passwordService.verify(session.refreshTokenHash, presentedToken);
   }

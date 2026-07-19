@@ -1,14 +1,25 @@
 import { randomUUID } from 'node:crypto';
 
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
 import { AuthResponseDto, UserProfileDto } from './dto/auth-response.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { OtpService } from './otp/otp.service';
 import { PasswordService } from './password.service';
 import { SessionsService } from './sessions.service';
-import { AccessTokenPayload, RefreshTokenPayload } from './types/jwt-payload.type';
+import {
+  AccessTokenPayload,
+  PasswordResetTokenPayload,
+  RefreshTokenPayload,
+} from './types/jwt-payload.type';
 import { parseDurationToMs } from './utils/parse-duration';
 import { EnvironmentVariables } from '../config/env.validation';
 import { User } from '../database/schema';
@@ -19,12 +30,19 @@ export type RequestContext = {
   ipAddress?: string;
 };
 
+/** Reset tokens are single-purpose and short-lived by design (see
+ * PasswordResetTokenPayload's doc comment) — 10 minutes gives a user
+ * enough time to check their email and return without leaving a
+ * long-lived credential-adjacent token outstanding. */
+const PASSWORD_RESET_TOKEN_TTL = '10m';
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly sessionsService: SessionsService,
     private readonly passwordService: PasswordService,
+    private readonly otpService: OtpService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService<EnvironmentVariables, true>,
   ) {}
@@ -43,7 +61,129 @@ export class AuthService {
       displayName: dto.displayName,
     });
 
+    await this.otpService.issue({ userId: user.id, email: user.email, purpose: 'register' });
+
     return this.issueTokensForNewSession(user, context);
+  }
+
+  /**
+   * Verifies the OTP sent on registration and marks the account
+   * verified. Does not itself gate login/session issuance — an
+   * unverified account can already authenticate (tokens were issued at
+   * registration time above); verification status is enforced by the
+   * mobile app's own navigation guard, not the API, per this module's
+   * existing "endpoints stay minimal, client owns UX gating" pattern
+   * (see users.schema.ts's `emailVerified` doc comment).
+   */
+  async verifyRegistrationOtp(email: string, code: string): Promise<UserProfileDto> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    const isValid = await this.otpService.verify({ userId: user.id, purpose: 'register', code });
+    if (!isValid) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    const verifiedUser = await this.usersService.markEmailVerified(user.id);
+    return this.toProfileDto(verifiedUser);
+  }
+
+  async resendRegistrationOtp(email: string): Promise<void> {
+    const user = await this.usersService.findByEmail(email);
+    // Deliberately silent on an unknown email (same reasoning as
+    // `requestPasswordReset` below) — do not reveal account existence to
+    // an unauthenticated caller.
+    if (!user || user.emailVerified) {
+      return;
+    }
+
+    await this.otpService.issue({ userId: user.id, email: user.email, purpose: 'register' });
+  }
+
+  /**
+   * Starts the forgot-password flow: issues an OTP if the email belongs
+   * to an account. Always resolves successfully regardless of whether
+   * the email exists — revealing "this email has no account" to an
+   * unauthenticated caller is an account-enumeration leak, so the same
+   * generic outcome is returned either way, and the mobile client always
+   * shows the same "check your email" state.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      return;
+    }
+
+    await this.otpService.issue({ userId: user.id, email: user.email, purpose: 'password_reset' });
+  }
+
+  /**
+   * Verifies a password-reset OTP and, on success, returns a short-lived
+   * reset token the client presents to `resetPassword` — the client
+   * never handles the OTP again after this call, mirroring the
+   * register-then-tokens shape of `register`/`login` above.
+   */
+  async verifyPasswordResetOtp(email: string, code: string): Promise<{ resetToken: string }> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    const isValid = await this.otpService.verify({
+      userId: user.id,
+      purpose: 'password_reset',
+      code,
+    });
+    if (!isValid) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    const payload: PasswordResetTokenPayload = {
+      sub: user.id,
+      purpose: 'password_reset',
+      jti: randomUUID(),
+    };
+    const resetToken = this.jwtService.sign(payload, {
+      secret: this.config.get('JWT_ACCESS_SECRET', { infer: true }),
+      expiresIn: PASSWORD_RESET_TOKEN_TTL,
+    });
+
+    return { resetToken };
+  }
+
+  /**
+   * Completes a password reset. Revokes every session for the user (see
+   * SessionsService.revokeAllForUser) — a password change should force
+   * re-authentication everywhere, not just leave other logged-in devices
+   * holding a now-orphaned credential.
+   */
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    const payload = this.verifyPasswordResetToken(dto.resetToken);
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+
+    const passwordHash = await this.passwordService.hash(dto.newPassword);
+    await this.usersService.updatePassword(user.id, passwordHash);
+    await this.sessionsService.revokeAllForUser(user.id);
+  }
+
+  private verifyPasswordResetToken(token: string): PasswordResetTokenPayload {
+    try {
+      const payload = this.jwtService.verify<PasswordResetTokenPayload>(token, {
+        secret: this.config.get('JWT_ACCESS_SECRET', { infer: true }),
+      });
+      if (payload.purpose !== 'password_reset') {
+        throw new Error('wrong token purpose');
+      }
+      return payload;
+    } catch {
+      throw new UnauthorizedException('Reset token is invalid or has expired');
+    }
   }
 
   /**
@@ -165,6 +305,7 @@ export class AuthService {
       email: user.email,
       displayName: user.displayName,
       isArtist: user.isArtist,
+      emailVerified: user.emailVerified,
     };
   }
 }

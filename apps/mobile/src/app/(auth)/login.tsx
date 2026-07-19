@@ -1,5 +1,5 @@
 import { Button, Surface, Text, useReducedMotion, useTheme } from '@music-app/design-system';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -65,11 +65,24 @@ export default function LoginScreen() {
     transform: [{ translateY: formTranslateY.value }],
   }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-    // Errors surface via the store's `error` field, rendered below —
-    // intentionally not re-thrown/logged here.
-    void login({ email, password });
+    try {
+      await login({ email, password });
+      // A logged-in-but-unverified account (e.g. they closed the app
+      // right after registering, before finishing OTP verification)
+      // must still complete verification — the root layout's guard (see
+      // apps/mobile/src/app/_layout.tsx) keeps `(auth)` reachable for
+      // this case, but doesn't know to land on *this* screen versus
+      // wherever the stack already was, so this explicit push is what
+      // actually gets them to verify-otp rather than just staying on a
+      // (functionally stuck) Login screen.
+      if (!useAuthStore.getState().user?.emailVerified) {
+        router.push({ pathname: '/(auth)/verify-otp', params: { email, purpose: 'register' } });
+      }
+    } catch {
+      // Errors surface via the store's `error` field, rendered below.
+    }
   };
 
   return (
@@ -125,7 +138,7 @@ export default function LoginScreen() {
             </Link>
 
             <Button
-              onPress={handleSubmit}
+              onPress={() => void handleSubmit()}
               disabled={!canSubmit}
               loading={isSubmitting}
               style={{ marginTop: theme.spacing.sm }}>

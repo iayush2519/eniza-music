@@ -72,11 +72,13 @@ export default function AuthResultScreen() {
       router.replace('/(auth)/login');
       return;
     }
-    // 'verified' -> the root layout's own Stack.Protected guards
-    // (see apps/mobile/src/app/_layout.tsx) will naturally route an
-    // authenticated, verified user into (tabs) once navigated away from
-    // the (auth) group -- no manual tab-group push needed here.
-    router.replace('/(auth)/login');
+    // 'verified': the account is already authenticated (register/login
+    // issue tokens up front) and now also verified, so the root layout's
+    // `isAuthenticated` guard (see apps/mobile/src/app/_layout.tsx) is
+    // already satisfied -- navigating to any in-app route hands off to
+    // (tabs) directly. `(tabs)/_layout.tsx`'s own verification check
+    // would also allow this through now that `emailVerified` is true.
+    router.replace('/(tabs)');
   };
 
   return (

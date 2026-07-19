@@ -76,6 +76,30 @@ export default function RootLayout() {
                 <Stack.Screen name="onboarding" />
               </Stack.Protected>
 
+              {/*
+                Deliberately gated on `isAuthenticated` alone, not also
+                `!isEmailVerified` — an earlier version of this guard also
+                required `isAuthenticated && !isEmailVerified` to keep
+                (auth) reachable through the verify-otp/auth-result
+                screens post-registration. That created a real race: the
+                instant `verifyOtp` succeeds, `isEmailVerified` flips
+                true, which would make *this* guard false and (tabs)'s
+                guard true before the "Account Verified" screen could
+                even render — Stack.Protected forcibly redirects away
+                from any screen in a group whose guard just went false,
+                which would skip the confirmation screen the approved UI
+                board shows entirely.
+
+                Verification enforcement instead lives in (tabs)'s own
+                layout (see (tabs)/_layout.tsx) as an explicit redirect
+                effect, plus the two places that ever transition
+                `isAuthenticated` from false to true — register.tsx and
+                login.tsx — both explicitly push to verify-otp when the
+                resulting profile isn't yet verified. Together these
+                cover the same "an authenticated-but-unverified user
+                cannot reach the main app" requirement without a
+                structural guard racing against in-flow navigation.
+              */}
               <Stack.Protected guard={isReady && !isAuthenticated && hasSeenOnboarding}>
                 <Stack.Screen name="(auth)" />
               </Stack.Protected>

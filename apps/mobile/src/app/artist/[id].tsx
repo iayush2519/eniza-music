@@ -2,7 +2,7 @@ import { Avatar, EmptyState, ErrorState, IconButton, Skeleton, SkeletonRow, Surf
 import type { Album } from '@music-app/shared-types';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { FlatList, StyleSheet } from 'react-native';
+import { FlatList, Share, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
@@ -65,7 +65,13 @@ export default function ArtistDetailScreen() {
   return (
     <Surface style={styles.root}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <Header variant="detail" title={artist?.name ?? 'Artist'} onBackPress={() => router.back()} />
+        <Header
+          variant="detail"
+          title={artist?.name ?? 'Artist'}
+          onBackPress={() => router.back()}
+          onActionPress={artist ? () => void Share.share({ message: `${artist.name} on Eniza` }) : undefined}
+          actionAccessibilityLabel="Share artist"
+        />
 
         {isLoading ? (
           <VStack gap="lg" style={styles.content}>

@@ -55,6 +55,7 @@ export default function ExploreScreen() {
           keyExtractor={(track) => track.id}
           style={styles.list}
           contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <VStack gap="md" style={styles.header}>
               <Text variant="title">Explore</Text>

@@ -1,6 +1,6 @@
 # System Overview
 
-**Status: current as of Phase 6.1 (2026-07-20).** This document is the
+**Status: current as of Phase 6.2 (2026-07-20).** This document is the
 entry point for understanding what ENIZA is and how its major pieces fit
 together. It supersedes the product-model framing previously spread across
 `overview.md`, `content-model.md`, and `catalog-and-library.md` — those
@@ -246,12 +246,13 @@ items directly gate or constrain upcoming work.
   Any iOS build today would fail at the native module layer — this is not
   a "port," it would be a from-scratch implementation. Tracked as Phase
   6.7.
-- **Dev-only OTP delivery.** `ConsoleOtpProvider`
-  (`apps/api/src/auth/otp/console-otp-provider.ts`) logs OTP codes to
-  console instead of sending real email/SMS. This is correct for local
-  development but is a functional gap, not a cosmetic one, outside a dev
-  machine — nobody else can receive a verification code. Tracked as Phase
-  6.2 (Critical priority).
+- ~~**Dev-only OTP delivery.**~~ **Resolved in Phase 6.2.**
+  `EmailOtpProvider` (`apps/api/src/auth/otp/email-otp-provider.ts`) sends
+  real OTP emails over SMTP via Nodemailer, selected automatically when
+  `SMTP_HOST` is configured. `ConsoleOtpProvider`
+  (`apps/api/src/auth/otp/console-otp-provider.ts`) remains in place as
+  the local-dev/test fallback when no SMTP config is present — this is by
+  design, not a remaining gap.
 - **No CI/CD pipeline.** No `.github/workflows` directory exists. Every
   merge today relies entirely on whoever is merging having run
   `turbo run lint/typecheck/test` (and `apps/api`'s `test:e2e`) locally.

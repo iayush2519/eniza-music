@@ -1,6 +1,6 @@
 # Backend Architecture
 
-**Status: current as of Phase 6.1 (2026-07-20).** This document describes
+**Status: current as of Phase 6.2 (2026-07-20).** This document describes
 the actual, current shape of `apps/api` — every module listed below exists
 in the codebase today, at the path given. It supersedes the "planned"
 framing this document previously carried (written during the Phase 4.5
@@ -76,6 +76,33 @@ itself is not behind a repository-per-module layer; Drizzle's typed query
 builder is used directly in each module's service. Adding a repository
 layer with no second implementation planned would be speculative
 complexity.
+
+## OTP delivery
+
+The `auth` module's registration-verification and password-reset flows
+both send a one-time code through `OtpService`
+(`src/auth/otp/otp.service.ts`), which never sends anything itself — it
+delegates to whichever `OtpDeliveryProvider` is bound to the
+`ACTIVE_OTP_DELIVERY_PROVIDER` DI token, exactly mirroring how `discovery`
+selects its active `MusicProvider`:
+
+- **`EmailOtpProvider`** (`src/auth/otp/email-otp-provider.ts`) — the
+  production implementation. Sends the code by email over SMTP via
+  Nodemailer; works with any SMTP-capable provider (SES, SendGrid,
+  Postmark, Mailgun, etc.) configured through `SMTP_HOST`/`SMTP_PORT`/
+  `SMTP_SECURE`/`SMTP_USER`/`SMTP_PASSWORD`/`SMTP_FROM_ADDRESS`. Retries a
+  transient send failure up to twice before raising a descriptive error.
+- **`ConsoleOtpProvider`** (`src/auth/otp/console-otp-provider.ts`) — logs
+  the code via Nest's `Logger` instead of sending anything. This remains
+  the active provider whenever `SMTP_HOST` is unset — every local dev
+  environment and every test (`jest-e2e-setup.ts` never sets `SMTP_HOST`)
+  — by design, not as a leftover gap.
+
+`auth.module.ts`'s factory for `ACTIVE_OTP_DELIVERY_PROVIDER` selects
+between the two based on whether `SMTP_HOST` is configured. Neither
+`OtpService`, `AuthService`, nor `AuthController` know which provider is
+active — adding a further delivery mechanism (e.g. SMS) later is a new
+class + one factory branch, not a change to any of those three.
 
 ## API surface (current endpoints, by module)
 
@@ -190,8 +217,12 @@ and Drizzle query behavior. Current e2e suites: `app`, `auth`, `catalog`,
 See [`system-overview.md`](./system-overview.md)'s Technical Debt section
 for the full, canonical register. Backend-specific highlights:
 
-- `ConsoleOtpProvider` is a dev-only stub — **Critical**, tracked as Phase
-  6.2.
+- ~~`ConsoleOtpProvider` is a dev-only stub~~ — **resolved in Phase 6.2**:
+  `EmailOtpProvider` (`src/auth/otp/email-otp-provider.ts`) is now the
+  production `OtpDeliveryProvider`, sending real OTP emails over SMTP via
+  Nodemailer; selected by `auth.module.ts`'s `ACTIVE_OTP_DELIVERY_PROVIDER`
+  factory when `SMTP_HOST` is configured, with `ConsoleOtpProvider`
+  remaining as the intentional local-dev/test fallback.
 - No `settings` module — **High**, tracked as Phase 6.3.
 - No rate limiting, no dependency vulnerability scanning in CI (there is
   no CI at all yet) — **High**, tracked as Phase 6.4/6.5.

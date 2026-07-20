@@ -61,9 +61,13 @@ synchronization step was introduced as a permanent part of the workflow.
   current codebase; permanent project standards and a Technical Debt
   register established. See
   [ADR 0009](decisions/ADR-0009-phase6-roadmap.md).
-- [ ] **Phase 6.2 — Real OTP delivery provider.** *(Critical priority.)*
-  Replace `ConsoleOtpProvider` (dev-only, logs OTP codes to console) with
-  a real email/SMS delivery implementation of `OtpDeliveryProvider`.
+- [x] **Phase 6.2 — Real OTP delivery provider.** Added `EmailOtpProvider`
+  (`apps/api/src/auth/otp/email-otp-provider.ts`), a Nodemailer/SMTP
+  implementation of `OtpDeliveryProvider`, selected by
+  `ACTIVE_OTP_DELIVERY_PROVIDER`'s factory in `auth.module.ts` when
+  `SMTP_HOST` is configured. `ConsoleOtpProvider` remains the default for
+  local dev and every test (no SMTP config set). See
+  `architecture/backend-architecture.md`'s OTP delivery section.
 - [ ] **Phase 6.3 — Settings & preferences.** *(High priority.)* Backend
   `settings` module for the already-modeled `settings` table
   (`explicitContentEnabled`, `autoplayEnabled`) plus a mobile settings
@@ -190,3 +194,25 @@ lock-in" section — nothing is provisioned yet.
   `architecture/backend-architecture.md` for what's known-incomplete
   going forward). No application code, UI, or branding assets were
   touched in this phase — documentation only.
+- **2026-07-20** — Phase 6.2 completed: `EmailOtpProvider`
+  (`apps/api/src/auth/otp/email-otp-provider.ts`) added as a production
+  `OtpDeliveryProvider` implementation, sending OTP codes over SMTP via
+  Nodemailer (pinned exact at `9.0.3`, plus `@types/nodemailer` as a dev
+  dependency). New optional env vars (`SMTP_HOST`, `SMTP_PORT`,
+  `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`) added
+  to `env.validation.ts`/`.env.example`, all `@IsOptional` so local dev
+  and every test environment are unaffected. `auth.module.ts`'s
+  `ACTIVE_OTP_DELIVERY_PROVIDER` factory now selects `EmailOtpProvider`
+  when `SMTP_HOST` is set, `ConsoleOtpProvider` otherwise — no change to
+  `OtpService`, `AuthService`, `AuthController`, or the public auth API.
+  `EmailOtpProvider` retries transient SMTP failures (up to 3 attempts)
+  before throwing. Added `email-otp-provider.spec.ts` (unit, mocked
+  Nodemailer transport) and `otp-provider-selection.spec.ts` (integration,
+  builds the real `AuthModule` graph to confirm the factory picks the
+  right provider for both configuration states); `otp.service.spec.ts`
+  and `auth.e2e-spec.ts` required no changes and still pass. Full
+  verification: typecheck/lint clean, unit Jest 9/9 suites (62/62 tests),
+  e2e Jest 9/9 relevant suites (82/82 tests) passing — the one failing
+  e2e suite, `metadata-refresh.e2e-spec.ts`, was confirmed via `git
+  stash` to fail identically before this change (a pre-existing
+  BullMQ/timing issue, unrelated to OTP delivery, out of scope here).

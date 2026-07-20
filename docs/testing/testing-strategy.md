@@ -1,6 +1,6 @@
 # Testing Strategy
 
-**Status: current as of Phase 6.1 (2026-07-20).** New document — testing
+**Status: current as of Phase 6.2 (2026-07-20).** New document — testing
 practices existed and were followed consistently, but were never written
 down centrally; this consolidates the actual current setup and states the
 plan for features not yet built.
@@ -88,7 +88,7 @@ performed in the same session** — see "Project Standards" in
 
 | Feature | Backend tests | Mobile tests | Notes |
 |---|---|---|---|
-| **6.2 — Real OTP provider** | Unit test the new provider's send-call shape (mocked transport); `otp.service.spec.ts` stays unchanged since the `OtpDeliveryProvider` interface doesn't change | None needed | A swap-in, not a new interface |
+| **6.2 — Real OTP provider** *(done)* | Built: `email-otp-provider.spec.ts` (unit — mocked Nodemailer `createTransport`/`sendMail`; covers success, missing-`SMTP_HOST` error, retry-then-succeed, retry-exhaustion, secure/insecure transport config, auth-omitted-when-no-credentials); `otp-provider-selection.spec.ts` (integration — builds the real `AuthModule` graph, asserts the `ACTIVE_OTP_DELIVERY_PROVIDER` factory resolves to `EmailOtpProvider` vs. `ConsoleOtpProvider` for both `SMTP_HOST` states); `otp.service.spec.ts` and `auth.e2e-spec.ts` required no changes and still pass, confirming the interface swap-in claim held | None needed | Confirmed a swap-in, not a new interface, as planned |
 | **6.3 — Settings** | New `settings.service.spec.ts` (unit) + `settings.e2e-spec.ts` (get/update, auth-scoped), following the `library.e2e-spec.ts` pattern | New `settings-store.spec.ts` (Zustand, mocked api-client), following `auth-store.spec.ts`'s pattern | Screen itself is presentation-only; extract logic into a testable function per the established pattern |
 | **6.4 — CI/CD** | N/A (infra) | N/A (infra) | Should run every command in the table above on every PR before merge is allowed |
 | **6.5 — QA & security hardening** | Add negative-path e2e tests (invalid tokens, expired sessions, malformed input) to existing suites; `pnpm audit` (or equivalent) in CI | Manual/documented a11y audit against design-system components (WCAG requires manual testing with assistive technology — automated checks alone are not sufficient, see `security.md`) | Adds tests to *existing* modules rather than a new module |

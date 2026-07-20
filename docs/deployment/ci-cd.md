@@ -1,6 +1,6 @@
 # CI/CD
 
-**Status: current as of Phase 6.1 (2026-07-20).** New document. **No CI/CD
+**Status: current as of Phase 6.2 (2026-07-20).** New document. **No CI/CD
 pipeline exists.** There is no `.github/workflows` directory anywhere in
 this repository. This document states that clearly, explains the
 consequence, and describes the planned pipeline (Phase 6.4) without
@@ -63,6 +63,22 @@ runs on every pull request and push to `master`:
 8. *(Deferred)* — dependency vulnerability scanning (`pnpm audit` or
    equivalent), tracked alongside Phase 6.5 (QA & security hardening)
    rather than as part of the initial pipeline stand-up.
+
+## Production secrets required for `apps/api` (Phase 6.2 addition)
+
+Beyond the existing required secrets (`DATABASE_URL`, `JWT_ACCESS_SECRET`,
+`JWT_REFRESH_SECRET`), any real deployment must also configure SMTP so
+`EmailOtpProvider` is selected instead of `ConsoleOtpProvider` (see
+`../architecture/backend-architecture.md`'s "OTP delivery" section):
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`,
+`SMTP_FROM_ADDRESS`. Without `SMTP_HOST` set, a production deployment
+would silently fall back to logging OTP codes via `Logger` instead of
+emailing them — no startup error, since these vars are deliberately
+optional (so local dev/tests are unaffected), but a real functional gap
+for real users. Whichever secrets-management approach a future deployment
+phase adopts (AWS Secrets Manager, SSM Parameter Store, etc. — see
+`backend-architecture.md`'s "AWS-readiness" section) must include these
+alongside the JWT secrets.
 
 ## Explicitly not planned yet
 

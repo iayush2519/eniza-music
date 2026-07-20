@@ -80,6 +80,53 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   REDIS_URL?: string;
+
+  /**
+   * Backs `EmailOtpProvider` (see auth/otp/email-otp-provider.ts).
+   * Deliberately optional, same reasoning as `JAMENDO_CLIENT_ID`/
+   * `REDIS_URL`: when unset (local dev without an SMTP account, and
+   * every test — `jest-e2e-setup.ts` never sets this), `AuthModule`
+   * falls back to `ConsoleOtpProvider` instead of failing startup or
+   * requiring a real mail server.
+   */
+  @IsString()
+  @IsOptional()
+  SMTP_HOST?: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  @IsOptional()
+  SMTP_PORT: number = 587;
+
+  /**
+   * Whether to use an implicit TLS connection (port 465) rather than
+   * STARTTLS (port 587). Matches Nodemailer's own `secure` transport
+   * option name. Defaults to `false` (STARTTLS), the more common setup
+   * for transactional-email SMTP endpoints (SES, SendGrid, Postmark,
+   * etc.).
+   */
+  @IsIn(['true', 'false'])
+  @IsOptional()
+  SMTP_SECURE: string = 'false';
+
+  @IsString()
+  @IsOptional()
+  SMTP_USER?: string;
+
+  @IsString()
+  @IsOptional()
+  SMTP_PASSWORD?: string;
+
+  /**
+   * The `From:` address on delivered OTP emails. Optional with a
+   * placeholder default — only read when `SMTP_HOST` is set (i.e. when
+   * `EmailOtpProvider` is actually active), so it never needs to be
+   * configured for local dev/test.
+   */
+  @IsString()
+  @IsOptional()
+  SMTP_FROM_ADDRESS: string = 'no-reply@example.com';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

@@ -71,6 +71,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={geistSans.variable}>
       <body className="font-sans antialiased">
+        {/* Keyboard/screen-reader users can jump straight past the
+            Navbar to <main> instead of tabbing through every nav link
+            and the logo first. Visually hidden until focused
+            (:focus-visible below), which is the standard skip-link
+            pattern — see WCAG 2.4.1 "Bypass Blocks". */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-md)] focus:bg-[var(--color-background-elevated)] focus:px-4 focus:py-3 focus:text-sm focus:font-medium focus:text-[var(--color-foreground)] focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         {children}
         <script
           type="application/ld+json"

@@ -2,13 +2,14 @@
 
 import { motion } from 'framer-motion';
 import { Dumbbell, Moon, Sparkles, Wand2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Container } from '@/components/ui/container';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Reveal } from '@/components/ui/reveal';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { cn } from '@/lib/cn';
+import { useReducedMotion } from '@/lib/use-reduced-motion';
 
 const EXAMPLE_PROMPTS = [
   { icon: Moon, text: 'Create a playlist for late-night coding.' },
@@ -27,6 +28,28 @@ const EXAMPLE_PROMPTS = [
  */
 export function AiFeaturesSection() {
   const [activePrompt, setActivePrompt] = useState(0);
+  const reduceMotion = useReducedMotion();
+
+  // Auto-cycle through example prompts on a fixed interval, owned by one
+  // effect rather than a `setTimeout` chained off each prompt's
+  // `onAnimationComplete` — the previous approach queued a new timer
+  // every time *any* prompt finished fading in, including the one a user
+  // had just clicked manually, so a manual selection could be silently
+  // overridden a moment later by a stale timer from the prompt it
+  // replaced. A single interval, cleared and restarted whenever
+  // `activePrompt` changes (including from a manual click), has exactly
+  // one timer alive at a time. Paused entirely under
+  // prefers-reduced-motion, matching every other auto-playing element on
+  // the page (Reveal, the navbar's mobile menu).
+  useEffect(() => {
+    if (reduceMotion) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setActivePrompt((current) => (current + 1) % EXAMPLE_PROMPTS.length);
+    }, 2600);
+    return () => clearTimeout(timer);
+  }, [activePrompt, reduceMotion]);
 
   return (
     <section id="ai" className="py-24 sm:py-32">
@@ -55,14 +78,7 @@ export function AiFeaturesSection() {
                   initial={false}
                   animate={{ opacity: activePrompt === index ? 1 : 0 }}
                   transition={{ duration: 0.4 }}
-                  onAnimationComplete={() => {
-                    if (activePrompt === index) {
-                      setTimeout(
-                        () => setActivePrompt((current) => (current + 1) % EXAMPLE_PROMPTS.length),
-                        2200,
-                      );
-                    }
-                  }}
+                  aria-hidden={activePrompt !== index}
                 >
                   &ldquo;{prompt.text}&rdquo;
                 </motion.p>

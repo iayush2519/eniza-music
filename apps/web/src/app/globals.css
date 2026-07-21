@@ -24,7 +24,6 @@
  */
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
   /* Base canvas: near-black with a faint warm undertone (not pure #000,
      which reads flat/cheap next to a soft accent gradient). */
@@ -37,7 +36,14 @@
 
   --color-foreground: #f6f3f7;
   --color-foreground-muted: #b8b0c2;
-  --color-foreground-subtle: #7d7488;
+  /* Lightened from an earlier #7d7488: that value measured 4.38:1 against
+     --color-background-elevated (the footer's background), just under
+     WCAG AA's 4.5:1 minimum for normal text. This value measures 6.16:1
+     on --color-background and 5.96:1 on --color-background-elevated —
+     comfortably AA-compliant everywhere it's used (footer captions, hero
+     mock subtitles, product-preview tab labels), while staying in the
+     same muted lavender-gray hue family. */
+  --color-foreground-subtle: #948aa5;
 
   /* Brand accent — direct from packages/design-system/src/tokens/colors.ts */
   --color-accent-blush: #e6a8a8;
@@ -74,6 +80,18 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Global keyboard-focus visibility fallback. Button.tsx sets its own
+     (more specific) focus-visible ring already; this covers every other
+     interactive element on the page — accordion triggers, product-preview
+     tabs, AI-features prompt chips, waitlist role toggles, the mobile
+     menu button, nav links — so keyboard/screen-reader users always get
+     a visible focus indicator, not just on the primary CTA. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent-blush);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
   }
 
   /* Respect reduced-motion preferences at the CSS level as a baseline;

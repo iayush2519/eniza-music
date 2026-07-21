@@ -68,6 +68,14 @@ synchronization step was introduced as a permanent part of the workflow.
   `SMTP_HOST` is configured. `ConsoleOtpProvider` remains the default for
   local dev and every test (no SMTP config set). See
   `architecture/backend-architecture.md`'s OTP delivery section.
+- [x] **Marketing site (`apps/web`).** *(Parallel addition, not part of
+  the Phase 6.x mobile/backend sequence below — added independently and
+  does not block or reorder it.)* A single-page, production-ready
+  Next.js 15 marketing/landing website for ENIZA Music, added as a new
+  app inside the existing Turborepo. No auth, dashboard, backend, blog,
+  or pricing system — see
+  [`architecture/marketing-site.md`](architecture/marketing-site.md) for
+  full scope and rationale.
 - [ ] **Phase 6.3 — Settings & preferences.** *(High priority.)* Backend
   `settings` module for the already-modeled `settings` table
   (`explicitContentEnabled`, `autoplayEnabled`) plus a mobile settings
@@ -216,3 +224,24 @@ lock-in" section — nothing is provisioned yet.
   e2e suite, `metadata-refresh.e2e-spec.ts`, was confirmed via `git
   stash` to fail identically before this change (a pre-existing
   BullMQ/timing issue, unrelated to OTP delivery, out of scope here).
+- **2026-07-21** — Marketing site (`apps/web`) added: a single-page,
+  dark-theme Next.js 15 (App Router) + React 19 + TypeScript + Tailwind
+  CSS v4 + Framer Motion + Lucide React landing site, scaffolded as a new
+  app inside the existing Turborepo (`pnpm-workspace.yaml`'s `apps/*`
+  glob already covered it; `turbo.json`'s `build` task outputs extended
+  to include `.next/**`). Sections: Hero, Features, AI Features, How It
+  Works, Product Preview, Roadmap, FAQ, Waitlist, Footer — composed in
+  `src/app/page.tsx`. Reuses ENIZA's brand accent colors (copied as
+  literal values into its own Tailwind `@theme`, not a shared runtime
+  import — `packages/design-system` is React Native-only) and copies of
+  the ENIZA logo/favicon/icon assets (originals in `assets/` untouched).
+  Waitlist form is backed by a `WaitlistService` interface
+  (`localStorage`-backed for now, swappable later) — no real backend, no
+  auth, no accounts, per this phase's explicit scope. Pinned to ESLint
+  9.x (`eslint-config-next`'s dependency chain caps ESLint support at
+  `^9.0.0`, the same documented exception already made for
+  `apps/mobile`/`apps/api` — see `tech-stack.md`). Verification: `apps/web`
+  typecheck/lint/`next build` all pass; full-workspace `turbo run
+  typecheck/lint/test` (11 tasks across every app/package) all pass,
+  confirming zero regression to `apps/api`/`apps/mobile`/`packages/*`. See
+  [`architecture/marketing-site.md`](architecture/marketing-site.md).

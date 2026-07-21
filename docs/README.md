@@ -82,7 +82,8 @@ them enforceable rather than assumed.
 5. Whichever domain doc is relevant to the task: `architecture/mobile-architecture.md`,
    `architecture/backend-architecture.md`, `architecture/playback-engine.md`,
    `architecture/design-system.md`, `architecture/state-management.md`,
-   `architecture/security.md`.
+   `architecture/security.md`, `architecture/marketing-site.md` (the
+   `apps/web` landing site).
 6. `testing/testing-strategy.md` and `deployment/*` if the task touches
    verification or shipping.
 7. `branding/branding-v1.md` if the task touches app icon, splash,

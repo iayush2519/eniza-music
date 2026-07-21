@@ -1,0 +1,118 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens for apps/web.
+ *
+ * This is a *new, separate* surface (a marketing site, not a screen in
+ * the mobile app), so it is not bound by the mobile app's Design System
+ * v1.0 freeze (docs/design/design-system-specification.md, which is
+ * explicitly light-only: "No dark modes or new accents" — see
+ * docs/branding/branding-v1.md). That freeze governs
+ * packages/design-system and apps/mobile's screens; it does not extend
+ * to apps/web, which has never had an approved design of its own.
+ *
+ * What IS carried over, to keep ENIZA's identity recognizable rather than
+ * inventing an unrelated palette: the brand accent hue family from
+ * packages/design-system/src/tokens/colors.ts — accent_blush (#E6A8A8)
+ * and accent_rose (#F5BDBD). Here they sit on a dark, premium canvas
+ * (background/surface/border/text roles below) built specifically for
+ * this landing page, extended with a complementary violet for the
+ * two-tone hero gradient the brief asks for. Spacing/radius follow the
+ * same numeric scale as packages/design-system/src/tokens/{spacing,radii}.ts
+ * (an 8px grid; pill-shaped buttons) even though this app doesn't import
+ * that package at runtime (it's React Native-only — see next.config.ts).
+ */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Base canvas: near-black with a faint warm undertone (not pure #000,
+     which reads flat/cheap next to a soft accent gradient). */
+  --color-background: #08070a;
+  --color-background-elevated: #0e0c11;
+  --color-surface: #131019;
+  --color-surface-hover: #1a1522;
+  --color-border: #241f2e;
+  --color-border-strong: #332c40;
+
+  --color-foreground: #f6f3f7;
+  --color-foreground-muted: #b8b0c2;
+  --color-foreground-subtle: #7d7488;
+
+  /* Brand accent — direct from packages/design-system/src/tokens/colors.ts */
+  --color-accent-blush: #e6a8a8;
+  --color-accent-rose: #f5bdbd;
+  /* Complementary violet, introduced only for this app's dark hero
+     gradient (blush -> violet), not part of the frozen mobile palette. */
+  --color-accent-violet: #a78bfa;
+
+  --color-success: #3c9d6b;
+  --color-danger: #e5484d;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+  --radius-pill: 999px;
+
+  --shadow-glow-blush: 0 0 120px 0 rgb(230 168 168 / 0.25);
+  --shadow-glow-violet: 0 0 120px 0 rgb(167 139 250 / 0.2);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Respect reduced-motion preferences at the CSS level as a baseline;
+     Framer Motion components additionally check this via
+     src/lib/use-reduced-motion.ts before running JS-driven animation. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism surface used across cards, the navbar, and the
+     product-preview mockup. Centralized as one utility class rather than
+     repeating the same five properties on every glass surface. */
+  .glass {
+    background-color: color-mix(in srgb, var(--color-surface) 60%, transparent);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 80%, transparent);
+  }
+
+  .text-gradient-brand {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-accent-blush),
+      var(--color-accent-rose) 45%,
+      var(--color-accent-violet)
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--color-border) 60%, transparent) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+}

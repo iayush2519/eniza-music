@@ -1,0 +1,10 @@
+# Next.js build output
+.next/
+out/
+
+# Vercel
+.vercel
+
+# TypeScript incremental build info
+*.tsbuildinfo
+next-env.d.ts

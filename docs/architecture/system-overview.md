@@ -77,7 +77,10 @@ direction, task graph, versioning approach) is in
 eniza/
 ├── apps/
 │   ├── mobile/     # Expo app — see mobile-architecture.md
-│   └── api/        # NestJS backend — see backend-architecture.md
+│   ├── api/        # NestJS backend — see backend-architecture.md
+│   └── web/        # Next.js marketing/landing site — see marketing-site.md
+│                    # (public-facing site, not part of the product itself;
+│                    #  no auth/dashboard/backend of its own)
 ├── packages/
 │   ├── shared-types/    # DTOs shared between mobile and api
 │   ├── design-system/   # Design tokens + themed primitives (frozen v1.0)

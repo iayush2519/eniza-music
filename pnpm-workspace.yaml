@@ -52,6 +52,13 @@ allowBuilds:
   # has a pure-JS fallback, so declining this build script has no
   # functional impact and avoids running an unreviewed native build step.
   msgpackr-extract: false
+  # Next.js's optional image-optimization dependency, pulled in by
+  # apps/web. Declined for the same reason as msgpackr-extract above:
+  # sharp has a pure-JS/WASM fallback, and apps/web doesn't use remote
+  # image optimization (next.config.ts sets `images.remotePatterns: []`)
+  # — there is no functional loss, and it avoids running an unreviewed
+  # native build step.
+  sharp: false
   unrs-resolver: true
 
 minimumReleaseAgeExclude:

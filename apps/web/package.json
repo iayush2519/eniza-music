@@ -1,0 +1,38 @@
+{
+  "name": "@music-app/web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Marketing landing site for ENIZA Music (Next.js App Router). Isolated from apps/api and apps/mobile; deployable independently to Vercel.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf .next out .turbo"
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "framer-motion": "12.42.2",
+    "lucide-react": "1.25.0",
+    "next": "15.5.20",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "tailwind-merge": "3.6.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "3.3.6",
+    "@music-app/config": "workspace:*",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.14.0",
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "~19.2.2",
+    "eslint": "9.39.4",
+    "eslint-config-next": "15.5.20",
+    "rimraf": "catalog:",
+    "tailwindcss": "4.3.3",
+    "typescript": "catalog:",
+    "typescript-eslint": "8.64.0"
+  }
+}

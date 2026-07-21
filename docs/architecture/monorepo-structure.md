@@ -7,7 +7,8 @@ caching.
 music-app/
 ├── apps/
 │   ├── mobile/              # Expo app (Android first, iOS/tablet/web later)
-│   └── api/                 # NestJS backend
+│   ├── api/                 # NestJS backend
+│   └── web/                 # Next.js marketing/landing site (see marketing-site.md)
 ├── packages/
 │   ├── shared-types/        # DTOs / API contracts shared between mobile and api
 │   ├── design-system/       # Design tokens + themed primitive components
@@ -47,13 +48,18 @@ music-app/
 ```
 apps/mobile      → design-system, audio-engine, shared-types, api-client, config
 apps/api         → shared-types, config
+apps/web         → config (devDependency only, for shared tsconfig base)
 packages/api-client → shared-types, config
 packages/design-system → config
 packages/audio-engine  → config
 ```
 
 No package ever depends on an app. `shared-types` and `config` have no
-internal dependencies — they are the leaves of the graph.
+internal dependencies — they are the leaves of the graph. `apps/web`
+deliberately depends on nothing beyond `config` — it has no backend
+integration in this phase (see `marketing-site.md`), and
+`design-system`'s primitives are React Native components that cannot run
+in `apps/web`'s DOM environment.
 
 ## Turborepo task graph
 
